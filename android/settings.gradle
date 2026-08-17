@@ -1,0 +1,3 @@
+include ':app'
+def pluginsFile = new File(settingsDir, 'flutter_plugins.groovy')
+if (pluginsFile.exists()) { apply from: pluginsFile }
