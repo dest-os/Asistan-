@@ -5,7 +5,7 @@ import 'depolama_servisi.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Çökme hatalarını konsola yazdır
+  // Çökme hatalarını konsola aktar
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     debugPrint('Flutter Hata: ${details.exception}');
@@ -27,7 +27,7 @@ class AresUygulamasi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ares Asistan',
+      title: 'Ares',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
