@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   flutter_secure_storage: ^9.0.0
   shared_preferences: ^2.2.2
+  http: ^1.2.0
+  screenshot: ^3.0.0
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:
