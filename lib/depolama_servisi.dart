@@ -1,13 +1,37 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'api_bilgisi.dart';
 
 class DepolamaServisi {
-  final _storage = FlutterSecureStorage();
-  final _prefs = SharedPreferences.getInstance();
+  static final _storage = const FlutterSecureStorage();
+  static SharedPreferences? _prefs;
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  static Future<void> kaydetKullaniciAdi(String kullaniciAdi) async {
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('kullaniciAdi', kullaniciAdi);
+  }
+
+  static Future<String?> kullaniciAdiGetir() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getString('kullaniciAdi');
+  }
+
+  static Future<ApiBilgisi?> apiBilgisiGetir() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    final url = _prefs?.getString('apiAdresi') ?? '';
+    return ApiBilgisi(apiAdresi: url);
+  }
 
   Future<void> oturumAyarla(String kullaniciAdi, String sifre) async {
-    await _storage.write(key: 'oturum', value: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}));
+    await _storage.write(
+      key: 'oturum',
+      value: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}),
+    );
   }
 
   Future<Map<String, dynamic>?> oturumBilgisiAl() async {
@@ -20,50 +44,62 @@ class DepolamaServisi {
   }
 
   Future<void> ayarlarKaydet(String ayarlar) async {
-    await _prefs.then((prefs) => prefs.setString('ayarlar', ayarlar));
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('ayarlar', ayarlar);
   }
 
   Future<String?> ayarlarAl() async {
-    return _prefs.then((prefs) => prefs.getString('ayarlar'));
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getString('ayarlar');
   }
 
   Future<void> kameraAlgila(bool algila) async {
-    await _prefs.then((prefs) => prefs.setBool('kameraAlgila', algila));
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setBool('kameraAlgila', algila);
   }
 
   Future<bool?> kameraAlgilaDurum() async {
-    return _prefs.then((prefs) => prefs.getBool('kameraAlgila'));
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getBool('kameraAlgila');
   }
 
   Future<void> sesDegistir(String ses) async {
-    await _prefs.then((prefs) => prefs.setString('ses', ses));
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('ses', ses);
   }
 
   Future<String?> sesAl() async {
-    return _prefs.then((prefs) => prefs.getString('ses'));
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getString('ses');
   }
 
   Future<void> akilliEgitimKaydet(String egitim) async {
-    await _prefs.then((prefs) => prefs.setString('akilliEgitim', egitim));
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('akilliEgitim', egitim);
   }
 
   Future<String?> akilliEgitimAl() async {
-    return _prefs.then((prefs) => prefs.getString('akilliEgitim'));
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getString('akilliEgitim');
   }
 
   Future<void> butonMenuKaydet(String menu) async {
-    await _prefs.then((prefs) => prefs.setString('butonMenu', menu));
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('butonMenu', menu);
   }
 
   Future<String?> butonMenuAl() async {
-    return _prefs.then((prefs) => prefs.getString('butonMenu'));
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getString('butonMenu');
   }
 
-  Future<void> jarvisSesliUyandırmaKaydet(bool uyandırma) async {
-    await _prefs.then((prefs) => prefs.setBool('jarvisSesliUyandırma', uyandırma));
+  Future<void> jarvisSesliUyandirmaKaydet(bool uyandirma) async {
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setBool('jarvisSesliUyandirma', uyandirma);
   }
 
-  Future<bool?> jarvisSesliUyandırmaDurum() async {
-    return _prefs.then((prefs) => prefs.getBool('jarvisSesliUyandırma'));
+  Future<bool?> jarvisSesliUyandirmaDurum() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs?.getBool('jarvisSesliUyandirma');
   }
 }
