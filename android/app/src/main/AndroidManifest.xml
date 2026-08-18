@@ -4,11 +4,10 @@
 
     <application
         android:label="Ares"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:name="${applicationName}">
         
         <activity
-            android:name=".MainActivity"
+            android:name="com.example.ares_asistan.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@android:style/Theme.Light.NoTitleBar"
