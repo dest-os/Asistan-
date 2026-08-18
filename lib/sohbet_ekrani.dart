@@ -10,7 +10,8 @@ import 'depolama_servisi.dart';
 class SohbetEkrani extends StatefulWidget {
   final String kullaniciAdi;
 
-  const SohbetEkrani({super, this.kullaniciAdi = 'Kullanıcı'});
+  const SohbetEkrani({Key? key, this.kullaniciAdi = 'Kullanıcı'})
+      : super(key: key);
 
   @override
   State<SohbetEkrani> createState() => _SohbetEkraniState();
