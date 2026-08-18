@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'ekranlar/giris_ekrani.dart';
-import 'ekranlar/sohbet_ekrani.dart';
-import 'servisler/depolama_servisi.dart';
+import 'giris_ekrani.dart';
+import 'sohbet_ekrani.dart';
+import 'depolama_servisi.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
