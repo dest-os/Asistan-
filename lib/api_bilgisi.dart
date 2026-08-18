@@ -1,61 +1,62 @@
-// Bu dosya, kullanicinin kaydettigi her bir yapay zeka API'sinin
-// bilgilerini tasiyan veri kalibidir (model).
+import 'dart:convert';
 
 class ApiBilgisi {
   final String id;
-  final String firmaAdi;
   final String apiAdresi;
-  final String apiAnahtari;
-  final List<String> uzmanlikAlanlari;
-  // Ornek: ["Metin", "Resim", "Kod"]
-  bool gunlukLimitDoldu;
-  // Kota uyarisi icin
+  final String firmaAdi;
 
   ApiBilgisi({
-    required this.id,
-    required this.firmaAdi,
+    this.id = 'default_id',
     required this.apiAdresi,
-    required this.apiAnahtari,
-    required this.uzmanlikAlanlari,
-    this.gunlukLimitDoldu = false,
+    this.firmaAdi = 'Varsayılan Firma',
   });
 
-  // Kayit icin veriyi JSON (metin) haline cevirir
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'firmaAdi': firmaAdi,
-      'apiAdresi': apiAdresi,
-      'apiAnahtari': apiAnahtari,
-      'uzmanlikAlanlari': uzmanlikAlanlari,
-      'gunlukLimitDoldu': gunlukLimitDoldu,
-    };
-  }
-
-  // Kayitli JSON metnini tekrar kullanilabilir hale getirir
-  factory ApiBilgisi.fromJson(Map<String, dynamic> json) {
+  ApiBilgisi copyWith({
+    String? id,
+    String? apiAdresi,
+    String? firmaAdi,
+  }) {
     return ApiBilgisi(
-      id: json['id'] as String,
-      firmaAdi: json['firmaAdi'] as String,
-      apiAdresi: json['apiAdresi'] as String,
-      apiAnahtari: json['apiAnahtari'] as String,
-      uzmanlikAlanlari: List<String>.from(json['uzmanlikAlanlari'] as List),
-      gunlukLimitDoldu: json['gunlukLimitDoldu'] as bool? ?? false,
+      id: id ?? this.id,
+      apiAdresi: apiAdresi ?? this.apiAdresi,
+      firmaAdi: firmaAdi ?? this.firmaAdi,
     );
   }
 
-  // Firma adina bakarak hangi konusma formatini kullanacagini tahmin eder.
-  // Boylece kullanicidan ekstra bir "format" alani istemeye gerek kalmaz.
-  String formatTuruBul() {
-    final ad = firmaAdi.toLowerCase();
-    if (ad.contains('google') || ad.contains('gemini')) {
-      return 'gemini';
-    } else if (ad.contains('anthropic') || ad.contains('claude')) {
-      return 'anthropic';
-    } else {
-      // OpenAI, Mistral, Groq, DeepSeek gibi cogu servis bu ortak
-      // formata uyumludur, bilinmeyen firmalarda varsayilan budur.
-      return 'openai_uyumlu';
-    }
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'id': id,
+      'apiAdresi': apiAdresi,
+      'firmaAdi': firmaAdi,
+    };
   }
+
+  factory ApiBilgisi.fromMap(Map<String, dynamic> map) {
+    return ApiBilgisi(
+      id: map['id'] as String? ?? 'default_id',
+      apiAdresi: map['apiAdresi'] as String? ?? '',
+      firmaAdi: map['firmaAdi'] as String? ?? 'Varsayılan Firma',
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ApiBilgisi.fromJson(String source) =>
+      ApiBilgisi.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() =>
+      'ApiBilgisi(id: $id, apiAdresi: $apiAdresi, firmaAdi: $firmaAdi)';
+
+  @override
+  bool operator ==(covariant ApiBilgisi other) {
+    if (identical(this, other)) return true;
+
+    return other.id == id &&
+        other.apiAdresi == apiAdresi &&
+        other.firmaAdi == firmaAdi;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ apiAdresi.hashCode ^ firmaAdi.hashCode;
 }
