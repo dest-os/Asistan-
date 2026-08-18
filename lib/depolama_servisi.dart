@@ -24,7 +24,8 @@ class DepolamaServisi {
   static Future<ApiBilgisi?> apiBilgisiGetir() async {
     _prefs ??= await SharedPreferences.getInstance();
     final url = _prefs?.getString('apiAdresi') ?? '';
-    return ApiBilgisi(apiAdresi: url);
+    final id = _prefs?.getString('apiId') ?? 'default_id';
+    return ApiBilgisi(id: id, apiAdresi: url);
   }
 
   Future<void> oturumAyarla(String kullaniciAdi, String sifre) async {
