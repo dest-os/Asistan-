@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'api_bilgisi.dart';
 import 'api_bilgisi_servisi.dart';
 import 'depolama_servisi.dart';
@@ -8,7 +10,7 @@ import 'depolama_servisi.dart';
 class SohbetEkrani extends StatefulWidget {
   final String kullaniciAdi;
 
-  const SohbetEkrani({super.key, this.kullaniciAdi = 'Kullanıcı'});
+  const SohbetEkrani({super, this.kullaniciAdi = 'Kullanıcı'});
 
   @override
   State<SohbetEkrani> createState() => _SohbetEkraniState();
@@ -34,9 +36,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   }
 
   Future<void> _paylas() async {
-    final dosyaYolu = await _screenshotController.capture();
-    if (dosyaYolu != null) {
-      await Share.shareXFiles([XFile(dosyaYolu.path)]);
+    final imageBytes = await _screenshotController.capture();
+    if (imageBytes != null) {
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/ekran_goruntusu.png').create();
+      await file.writeAsBytes(imageBytes);
+      await Share.shareXFiles([XFile(file.path)]);
     }
   }
 
