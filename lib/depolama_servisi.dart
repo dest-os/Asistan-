@@ -1,15 +1,26 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'api_bilgisi.dart';
 
 class DepolamaServisi {
-  static final _storage = const FlutterSecureStorage();
+  // Android çökmesini önleyen güvenli AndroidOptions yapılandırması
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
+
   static SharedPreferences? _prefs;
 
   // Servis Başlatma (main.dart için)
   static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      debugPrint('SharedPreferences başlatılamadı: $e');
+    }
   }
 
   // Kullanıcı Adı İşlemleri
@@ -41,19 +52,33 @@ class DepolamaServisi {
 
   // Oturum İşlemleri (Güvenli Depolama)
   Future<void> oturumAyarla(String kullaniciAdi, String sifre) async {
-    await _storage.write(
-      key: 'oturum',
-      value: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}),
-    );
+    try {
+      await _storage.write(
+        key: 'oturum',
+        value: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}),
+      );
+    } catch (e) {
+      // Şifreleme anahtarı hatası durumunda temizleyip yeniden dene
+      await _storage.deleteAll();
+      await _storage.write(
+        key: 'oturum',
+        value: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}),
+      );
+    }
   }
 
   Future<Map<String, dynamic>?> oturumBilgisiAl() async {
-    final json = await _storage.read(key: 'oturum');
-    if (json != null) {
-      return jsonDecode(json) as Map<String, dynamic>;
-    } else {
-      return null;
+    try {
+      final json = await _storage.read(key: 'oturum');
+      if (json != null) {
+        return jsonDecode(json) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Oturum bilgisi okunurken hata: $e');
+      // Bozulan depolamayı temizle
+      await _storage.deleteAll();
     }
+    return null;
   }
 
   // Uygulama Ayarları
