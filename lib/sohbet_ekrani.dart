@@ -37,33 +37,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              _bgImage,
-              fit: BoxFit.fill,
-            ),
-          ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 20,
-            child: TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Herhangi bir şey sor...',
-                hintStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: Colors.black54,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Colors.cyanAccent),
-                ),
-              ),
-            ),
-          ),
-        ],
+      body: SizedBox.expand(
+        child: Image.asset(
+          _bgImage,
+          fit: BoxFit.fill,
+        ),
       ),
     );
   }
