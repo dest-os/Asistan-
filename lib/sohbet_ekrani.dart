@@ -42,22 +42,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Arka Plan Resmi
           Positioned.fill(
             child: Image.asset(
               _bgImage,
               fit: BoxFit.fill,
             ),
           ),
-
-          // 2. Resimdeki Sabit "İbrahim" Yazısını Kapatıp Dinamik İsmi Yazan Katman
+          // Dinamik İsim Yazısı Katmanı
           Positioned(
             left: MediaQuery.of(context).size.width * 0.28,
             right: MediaQuery.of(context).size.width * 0.32,
             top: MediaQuery.of(context).size.height * 0.43,
             height: 50,
             child: Container(
-              color: Colors.black, // Resimdeki sabit yazıyı gizleyen maske
+              color: Colors.black,
               alignment: Alignment.center,
               child: Text(
                 'Merhaba $_kullaniciAdi, senin için ne yapabilirim?',
