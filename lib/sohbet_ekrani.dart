@@ -10,6 +10,7 @@ class SohbetEkrani extends StatefulWidget {
 
 class _SohbetEkraniState extends State<SohbetEkrani> {
   String _bgImage = '';
+  String _kullaniciAdi = 'Kullanıcı';
   bool _yuklendi = false;
 
   @override
@@ -21,11 +22,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
     String secim = prefs.getString('secilen_karakter') ?? 'KADIN';
+    String kayitliIsim = prefs.getString('kullanici_adi') ?? 'Kullanıcı';
 
     setState(() {
       _bgImage = (secim == 'KADIN')
           ? 'assets/kadin_ares_ekrani.png'
           : 'assets/erkek_ares ekrani.png';
+      _kullaniciAdi = kayitliIsim;
       _yuklendi = true;
     });
   }
@@ -37,11 +40,37 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     }
 
     return Scaffold(
-      body: SizedBox.expand(
-        child: Image.asset(
-          _bgImage,
-          fit: BoxFit.fill,
-        ),
+      body: Stack(
+        children: [
+          // 1. Arka Plan Resmi
+          Positioned.fill(
+            child: Image.asset(
+              _bgImage,
+              fit: BoxFit.fill,
+            ),
+          ),
+
+          // 2. Resimdeki Sabit "İbrahim" Yazısını Kapatıp Dinamik İsmi Yazan Katman
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.28,
+            right: MediaQuery.of(context).size.width * 0.32,
+            top: MediaQuery.of(context).size.height * 0.43,
+            height: 50,
+            child: Container(
+              color: Colors.black, // Resimdeki sabit yazıyı gizleyen maske
+              alignment: Alignment.center,
+              child: Text(
+                'Merhaba $_kullaniciAdi, senin için ne yapabilirim?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
