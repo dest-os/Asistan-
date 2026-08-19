@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'giris_ekrani.dart';
-import 'sohbet_ekrani.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final secilenKarakter = prefs.getString('secilen_karakter');
-
-  runApp(AresAsistanApp(baslangicEkrani: secilenKarakter != null ? const SohbetEkrani() : const GirisEkrani()));
+void main() {
+  runApp(const AresAsistanApp());
 }
 
 class AresAsistanApp extends StatelessWidget {
-  final Widget baslangicEkrani;
-  const AresAsistanApp({super.key, required this.baslangicEkrani});
+  const AresAsistanApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +17,7 @@ class AresAsistanApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: baslangicEkrani,
+      home: const GirisEkrani(),
     );
   }
 }
