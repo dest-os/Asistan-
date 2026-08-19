@@ -15,18 +15,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   @override
   void initState() {
     super.initState();
-    _ayarlariYukle();
+    _yukle();
   }
 
-  Future<void> _ayarlariYukle() async {
+  Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
-    // GirisEkrani'nda kaydedilen seçimi alıyoruz
     String secim = prefs.getString('secilen_karakter') ?? 'KADIN';
-    
+
     setState(() {
-      // Dosya isimlerini tam olarak senin gönderdiğin şekilde tanımladık
-      _bgImage = (secim == 'KADIN') 
-          ? 'assets/kadin_ares_ekrani.png' 
+      _bgImage = (secim == 'KADIN')
+          ? 'assets/kadin_ares_ekrani.png'
           : 'assets/erkek_ares ekrani.png';
       _yuklendi = true;
     });
@@ -41,27 +39,27 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Arka plan görseli
           Positioned.fill(
             child: Image.asset(
-              _bgImage, 
-              fit: BoxFit.cover,
+              _bgImage,
+              fit: BoxFit.fill,
             ),
           ),
-          
-          // 2. Kullanıcının yazı yazacağı alan
-          // Tasarımına göre "Herhangi bir şey sor" yazan yere konumlandırıldı
           Positioned(
-            left: 280, 
-            right: 320,
-            bottom: 45, 
-            height: 40,
+            left: 20,
+            right: 20,
+            bottom: 20,
             child: TextField(
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
                 hintText: 'Herhangi bir şey sor...',
-                hintStyle: TextStyle(color: Colors.white24),
+                hintStyle: const TextStyle(color: Colors.white54),
+                filled: true,
+                fillColor: Colors.black54,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: Colors.cyanAccent),
+                ),
               ),
             ),
           ),
