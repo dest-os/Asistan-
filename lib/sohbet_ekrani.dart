@@ -19,7 +19,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     _tercihleriYukle();
   }
 
-  // Giriş ekranında kaydedilen verileri okuma
   Future<void> _tercihleriYukle() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -62,8 +61,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
                           child: Image.asset(
                             _secilenKarakter == 'KADIN'
-                                ? 'assets/images/ares_kadın.png'
-                                : 'assets/images/ares_erkek.png',
+                                ? 'assets/kadin_ares.png'
+                                : 'assets/erkek_ares.png',
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (context, error, stackTrace) => const Icon(
@@ -107,7 +106,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                   ),
                   child: Column(
                     children: [
-                      // Üst Başlık Barı
                       const Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -130,7 +128,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                         ],
                       ),
 
-                      // Orta Karşılama Alanı
                       Expanded(
                         child: Center(
                           child: Text(
@@ -144,7 +141,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                         ),
                       ),
 
-                      // Alt Giriş ve Butonlar Barı
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -182,7 +178,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
 
               const SizedBox(width: 8),
 
-              // 3. SAĞ PANEL (Logo ve Kaydet Butonu)
+              // 3. SAĞ PANEL (Logo ve Kaydet)
               Expanded(
                 flex: 2,
                 child: Container(
@@ -195,7 +191,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                       Expanded(
                         child: Center(
                           child: Image.asset(
-                            'assets/images/logo.png',
+                            'assets/logo.png',
                             height: 100,
                             errorBuilder: (context, error, stackTrace) => const Icon(
                               Icons.remove_red_eye,
