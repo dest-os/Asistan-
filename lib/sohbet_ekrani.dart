@@ -48,22 +48,24 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
               fit: BoxFit.fill,
             ),
           ),
-          // Dinamik İsim Yazısı Katmanı
+          // Resimdeki Sabit Yazıyı Kapatıp Tam Ortalanmış Dinamik Metin Alanı
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.28,
-            right: MediaQuery.of(context).size.width * 0.32,
-            top: MediaQuery.of(context).size.height * 0.43,
-            height: 50,
+            left: MediaQuery.of(context).size.width * 0.26,
+            right: MediaQuery.of(context).size.width * 0.30,
+            top: MediaQuery.of(context).size.height * 0.38,
+            height: 70,
             child: Container(
               color: Colors.black,
               alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
                 'Merhaba $_kullaniciAdi, senin için ne yapabilirim?',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w400,
+                  height: 1.3,
                 ),
               ),
             ),
