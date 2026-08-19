@@ -32,7 +32,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Orijinal Giriş Ekranı Görseli
+          // Orijinal Arka Plan Görseli
           Positioned.fill(
             child: Image.asset(
               'assets/giris_ekrani.png',
@@ -40,7 +40,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // 2. Sol Taraf (KADIN ARES Tıklama Alanı)
+          // Kadın Ares Tıklama Alanı (Sol)
           Positioned(
             left: 0,
             top: 0,
@@ -52,7 +52,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // 3. Sağ Taraf (ERKEK ARES Tıklama Alanı)
+          // Erkek Ares Tıklama Alanı (Sağ)
           Positioned(
             right: 0,
             top: 0,
@@ -64,7 +64,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // 4. Kullanıcı Adı Giriş Kutusu
+          // Kullanıcı Adı Yazma Alanı
           Positioned(
             left: MediaQuery.of(context).size.width * 0.42,
             top: MediaQuery.of(context).size.height * 0.53,
