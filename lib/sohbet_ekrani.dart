@@ -9,50 +9,60 @@ class SohbetEkrani extends StatefulWidget {
 }
 
 class _SohbetEkraniState extends State<SohbetEkrani> {
-  String _karakter = 'KADIN';
+  String _bgImage = '';
   bool _yuklendi = false;
 
   @override
   void initState() {
     super.initState();
-    _yukle();
+    _ayarlariYukle();
   }
 
-  Future<void> _yukle() async {
+  Future<void> _ayarlariYukle() async {
     final prefs = await SharedPreferences.getInstance();
+    // GirisEkrani'nda kaydedilen seçimi alıyoruz
+    String secim = prefs.getString('secilen_karakter') ?? 'KADIN';
+    
     setState(() {
-      _karakter = prefs.getString('secilen_karakter') ?? 'KADIN';
+      // Dosya isimlerini tam olarak senin gönderdiğin şekilde tanımladık
+      _bgImage = (secim == 'KADIN') 
+          ? 'assets/kadin_ares_ekrani.png' 
+          : 'assets/erkek_ares ekrani.png';
       _yuklendi = true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_yuklendi) return const Scaffold(backgroundColor: Colors.black);
-
-    // GÖNDERDİĞİN O GÜZEL TAM EKRAN TASARIMLARINI BURAYA YÜKLÜYORUZ
-    String bgImage = _karakter == 'KADIN' ? 'assets/Kadın ares ekranı.png' : 'assets/Erkek ares ekranı.png';
+    if (!_yuklendi) {
+      return const Scaffold(backgroundColor: Colors.black);
+    }
 
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. ADIM: TAM EKRAN TASARIMIN
+          // 1. Arka plan görseli
           Positioned.fill(
-            child: Image.asset(bgImage, fit: BoxFit.fill),
+            child: Image.asset(
+              _bgImage, 
+              fit: BoxFit.cover,
+            ),
           ),
           
-          // 2. ADIM: SADECE YAZI YAZILACAK YERİ (TextField) GÖRÜNMEZ ŞEKİLDE EKLİYORUZ
-          // Bu TextField'ı, senin tasarımındaki giriş yerinin üzerine denk getirmemiz lazım.
-          // Kodda 'bottom' değerini deneme yanılma ile 5-10 piksel kaydırarak tam oturtabilirsin.
+          // 2. Kullanıcının yazı yazacağı alan
+          // Tasarımına göre "Herhangi bir şey sor" yazan yere konumlandırıldı
           Positioned(
-            left: 280, // Burayı tasarımına göre tasarımındaki giriş alanına göre sağ/sol ayarla
+            left: 280, 
             right: 320,
-            bottom: 40, 
-            height: 50,
+            bottom: 45, 
+            height: 40,
             child: TextField(
               style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: const InputDecoration(border: InputBorder.none),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Herhangi bir şey sor...',
+                hintStyle: TextStyle(color: Colors.white24),
+              ),
             ),
           ),
         ],
