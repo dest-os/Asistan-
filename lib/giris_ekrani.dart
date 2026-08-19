@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'sohbet_ekrani.dart';
-import 'depolama_servisi.dart';
-import 'api_bilgisi.dart';
 
 class GirisEkrani extends StatefulWidget {
   const GirisEkrani({super.key});
@@ -11,194 +10,221 @@ class GirisEkrani extends StatefulWidget {
 }
 
 class _GirisEkraniState extends State<GirisEkrani> {
-  final TextEditingController _isimController = TextEditingController();
-  final List<String> _uzmanlikSecenekleri = [
-    'Yazılım',
-    'Tasarım',
-    'Pazarlama',
-    'Finans',
-    'Genel Asistan'
-  ];
-  List<String> seciliUzmanliklar = [];
-  bool _yukleniyor = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _mevcutKullaniciKontrolEt();
-  }
+  final TextEditingController _kullaniciAdiController = TextEditingController();
+  String _secilenKarakter = 'KADIN'; // Varsayılan seçim
 
   @override
   void dispose() {
-    _isimController.dispose();
+    _kullaniciAdiController.dispose();
     super.dispose();
   }
 
-  // Kayıtlı kullanıcı varsa direkt sohbet ekranına yönlendir
-  Future<void> _mevcutKullaniciKontrolEt() async {
-    try {
-      final kayitliIsim = await DepolamaServisi.kullaniciAdiGetir();
-      if (kayitliIsim != null && kayitliIsim.isNotEmpty && mounted) {
-        _sohbetEkraniAc(kayitliIsim);
-      }
-    } catch (e) {
-      debugPrint('Kullanıcı okuma hatası: $e');
-    }
-  }
+  // Kullanıcı tercihlerini telefon hafızasına kaydetme fonksiyonu
+  Future<void> _kaydetVeDevamEt() async {
+    final kullaniciAdi = _kullaniciAdiController.text.trim();
 
-  void _girisYap() async {
-    final isim = _isimController.text.trim();
-    if (isim.isEmpty) {
+    if (kullaniciAdi.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen isminizi girin.')),
+        const SnackBar(
+          content: Text('Lütfen ARES\'in size nasıl sesleneceğini yazın.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
 
-    setState(() {
-      _yukleniyor = true;
-    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('kullanici_adi', kullaniciAdi);
+    await prefs.setString('secilen_karakter', _secilenKarakter);
+    await prefs.setBool('giris_yapildi', true);
 
-    try {
-      await DepolamaServisi.kaydetKullaniciAdi(isim);
-      if (mounted) {
-        _sohbetEkraniAc(isim);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata oluştu: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _yukleniyor = false;
-        });
-      }
-    }
-  }
+    if (!mounted) return;
 
-  void _sohbetEkraniAc(String isim) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SohbetEkrani(
-          kullaniciAdi: isim,
-        ),
-      ),
+    // Kayıt tamamlandıktan sonra doğrudan 2. ekrana (Sohbet Ekrana) geçiş
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const SohbetEkrani()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF121212),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
-                const Text(
-                  'Ares Asistan',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              
+              // Üst Kısım: Karakter Seçimleri ve Logo
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // ARES KADIN Seçim Alanı
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _secilenKarakter = 'KADIN';
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _secilenKarakter == 'KADIN'
+                                  ? const Color(0xFF00E5FF)
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: const CircleAvatar(
+                            radius: 40,
+                            backgroundImage: AssetImage('assets/images/ares_kadın.png'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              _secilenKarakter == 'KADIN'
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              color: const Color(0xFF00E5FF),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'ARES KADIN',
+                              style: TextStyle(
+                                color: Color(0xFF00E5FF),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Orta Logo
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 80,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.remove_red_eye,
+                      color: Color(0xFF00E5FF),
+                      size: 60,
+                    ),
+                  ),
+
+                  // ARES ERKEK Seçim Alanı
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _secilenKarakter = 'ERKEK';
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _secilenKarakter == 'ERKEK'
+                                  ? const Color(0xFF00E5FF)
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: const CircleAvatar(
+                            radius: 40,
+                            backgroundImage: AssetImage('assets/images/ares_erkek.png'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              _secilenKarakter == 'ERKEK'
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              color: const Color(0xFF00E5FF),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'ARES ERKEK',
+                              style: TextStyle(
+                                color: Color(0xFF00E5FF),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 40),
+
+              // Kullanıcı Adı Giriş Alanı (Görselinizdeki Tasarıma Sadık)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF00E5FF),
+                    width: 1.5,
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Hoş geldiniz! Devam etmek için bilgilerinizi girin.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                TextField(
-                  controller: _isimController,
+                child: TextField(
+                  controller: _kullaniciAdiController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Adınız veya Takma Adınız',
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Color(0xFF2196F3)),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[900],
+                  decoration: const InputDecoration(
+                    icon: Icon(Icons.person, color: Color(0xFF00E5FF)),
+                    hintText: 'KULLANICI ADI',
+                    hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                    border: InputBorder.none,
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Uzmanlık Alanları',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  children: _uzmanlikSecenekleri.map((uzmanlik) {
-                    final secili = seciliUzmanliklar.contains(uzmanlik);
-                    return FilterChip(
-                      label: Text(uzmanlik),
-                      selected: secili,
-                      selectedColor: const Color(0xFF2196F3),
-                      checkmarkColor: Colors.white,
-                      labelStyle: TextStyle(
-                        color: secili ? Colors.white : Colors.grey,
-                      ),
-                      backgroundColor: Colors.grey[900],
-                      onSelected: (bool selected) {
-                        setState(() {
-                          if (selected) {
-                            seciliUzmanliklar.add(uzmanlik);
-                          } else {
-                            seciliUzmanliklar.remove(uzmanlik);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: _yukleniyor ? null : _girisYap,
+              ),
+
+              const SizedBox(height: 30),
+
+              // Devam Et / Başla Butonu
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _kaydetVeDevamEt,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF00E5FF),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _yukleniyor
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Başla',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                  child: const Text(
+                    'BAŞLAT',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
