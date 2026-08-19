@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sohbet_ekrani.dart';
 
-class GirisEkrani extends StatelessWidget {
+class GirisEkrani extends StatefulWidget {
   const GirisEkrani({super.key});
 
-  Future<void> _devamEt(BuildContext context, String karakter, String isim) async {
+  @override
+  State<GirisEkrani> createState() => _GirisEkraniState();
+}
+
+class _GirisEkraniState extends State<GirisEkrani> {
+  String _secilenKarakter = 'KADIN';
+
+  Future<void> _devamEt(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('kullanici_adi', isim.isEmpty ? 'İbrahim' : isim);
-    await prefs.setString('secilen_karakter', karakter);
+    await prefs.setString('secilen_karakter', _secilenKarakter);
     
-    if(!context.mounted) return;
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SohbetEkrani()),
     );
@@ -18,44 +24,47 @@ class GirisEkrani extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    TextEditingController controller = TextEditingController();
-    
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // KARTLAR
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // KADIN RESMİ
                 GestureDetector(
-                  onTap: () => _devamEt(context, 'KADIN', controller.text),
-                  child: Image.asset('assets/kadin_ares.png', height: 250),
+                  onTap: () => setState(() => _secilenKarakter = 'KADIN'),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: _secilenKarakter == 'KADIN' ? 1.0 : 0.4,
+                    child: Image.asset('assets/kadin_ares.png', height: 250),
+                  ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 40),
+                // ERKEK RESMİ
                 GestureDetector(
-                  onTap: () => _devamEt(context, 'ERKEK', controller.text),
-                  child: Image.asset('assets/erkek_ares.png', height: 250),
+                  onTap: () => setState(() => _secilenKarakter = 'ERKEK'),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: _secilenKarakter == 'ERKEK' ? 1.0 : 0.4,
+                    child: Image.asset('assets/erkek_ares.png', height: 250),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 30),
-            // GİRİŞ KUTUSU
-            SizedBox(
-              width: 500,
-              child: TextField(
-                controller: controller,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Kullanıcı Adı Girin',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: Colors.black,
-                  enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFF00E5FF))),
-                  focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFF00E5FF))),
-                ),
+            const SizedBox(height: 50),
+            // DEVAM ET BUTONU
+            ElevatedButton(
+              onPressed: () => _devamEt(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E5FF),
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              ),
+              child: const Text(
+                'DEVAM ET',
+                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
               ),
             ),
           ],
