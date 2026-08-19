@@ -32,60 +32,57 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   Widget build(BuildContext context) {
     if (!_yuklendi) {
       return const Scaffold(
-        backgroundColor: Color(0xFF000000),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
-        ),
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF00E5FF))),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              // 1. SOL PANEL (Seçilen Karakter Görseli ve Arama)
+              // SOL PANEL: Seçilen Karakterin Boydan/Büst Resmi
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: Container(
                   decoration: BoxDecoration(
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFF005580), width: 1.5),
                   ),
-                  child: Column(
+                  child: Stack(
                     children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                          child: Image.asset(
-                            _secilenKarakter == 'KADIN'
-                                ? 'assets/kadin_ares.png'
-                                : 'assets/erkek_ares.png',
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.person,
-                              size: 80,
-                              color: Color(0xFF00E5FF),
-                            ),
-                          ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          _secilenKarakter == 'KADIN' ? 'assets/kadin_ares.png' : 'assets/erkek_ares.png',
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
                         ),
                       ),
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF005580)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.search, color: Colors.white54, size: 16),
-                            SizedBox(width: 4),
-                            Text('Arama', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                          ],
+                      Positioned(
+                        left: 10,
+                        bottom: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF005580)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.search, color: Colors.white70, size: 16),
+                              SizedBox(width: 6),
+                              Text('Arama', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -93,14 +90,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
-              // 2. ORTA PANEL (Ana Sohbet Alanı)
+              // ORTA PANEL: Mesajlaşma Alanı
               Expanded(
-                flex: 4,
+                flex: 6,
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFF005580), width: 1.5),
                   ),
@@ -115,11 +113,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                               SizedBox(width: 8),
                               Text(
                                 'ARES',
-                                style: TextStyle(
-                                  color: Color(0xFF00E5FF),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
+                                style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                               Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E5FF), size: 20),
                             ],
@@ -133,18 +127,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                           child: Text(
                             'Merhaba $_kullaniciAdi, senin için ne yapabilirim?',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
+                            style: const TextStyle(color: Colors.white, fontSize: 15),
                           ),
                         ),
                       ),
 
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0A0A0A),
+                          color: const Color(0xFF050505),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: const Color(0xFF003355)),
                         ),
@@ -176,39 +167,38 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
-              // 3. SAĞ PANEL (Logo ve Kaydet)
+              // SAĞ PANEL: Büyük Logo ve Disket Simgesi
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: Container(
                   decoration: BoxDecoration(
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFF005580), width: 1.5),
                   ),
-                  child: Column(
+                  child: Stack(
                     children: [
-                      Expanded(
-                        child: Center(
-                          child: Image.asset(
-                            'assets/logo.png',
-                            height: 100,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.remove_red_eye,
-                              size: 60,
-                              color: Color(0xFF00E5FF),
-                            ),
-                          ),
+                      Center(
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: 160,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF005580)),
+                      Positioned(
+                        left: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF005580)),
+                          ),
+                          child: const Icon(Icons.save_outlined, color: Color(0xFF0066FF), size: 18),
                         ),
-                        child: const Icon(Icons.save_outlined, color: Color(0xFF0066FF), size: 20),
                       ),
                     ],
                   ),
