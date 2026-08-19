@@ -1,56 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'giris_ekrani.dart';
 import 'sohbet_ekrani.dart';
 
-class GirisEkrani extends StatelessWidget {
-  const GirisEkrani({super.key});
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final secilenKarakter = prefs.getString('secilen_karakter');
 
-  Future<void> _secimYap(BuildContext context, String karakter) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('secilen_karakter', karakter);
-    
-    if (!context.mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const SohbetEkrani()),
-    );
-  }
+  runApp(AresAsistanApp(baslangicEkrani: secilenKarakter != null ? const SohbetEkrani() : const GirisEkrani()));
+}
+
+class AresAsistanApp extends StatelessWidget {
+  final Widget baslangicEkrani;
+  const AresAsistanApp({super.key, required this.baslangicEkrani});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Row(
-          children: [
-            // KADIN ARES
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _secimYap(context, 'KADIN'),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Image.asset(
-                    'assets/kadin_ares.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-            // ERKEK ARES
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _secimYap(context, 'ERKEK'),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Image.asset(
-                    'assets/erkek_ares.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Ares Asistan',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
       ),
+      home: baslangicEkrani,
     );
   }
 }
