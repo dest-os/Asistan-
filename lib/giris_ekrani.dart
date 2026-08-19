@@ -10,13 +10,12 @@ class GirisEkrani extends StatefulWidget {
 }
 
 class _GirisEkraniState extends State<GirisEkrani> {
-  String _secilenKarakter = 'KADIN';
-
-  Future<void> _devamEt(BuildContext context) async {
+  
+  Future<void> _secimYap(String karakter) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('secilen_karakter', _secilenKarakter);
+    await prefs.setString('secilen_karakter', karakter);
     
-    if (!mounted) return;
+    if(!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SohbetEkrani()),
     );
@@ -25,50 +24,33 @@ class _GirisEkraniState extends State<GirisEkrani> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // KADIN RESMİ
-                GestureDetector(
-                  onTap: () => setState(() => _secilenKarakter = 'KADIN'),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    opacity: _secilenKarakter == 'KADIN' ? 1.0 : 0.4,
-                    child: Image.asset('assets/kadin_ares.png', height: 250),
-                  ),
-                ),
-                const SizedBox(width: 40),
-                // ERKEK RESMİ
-                GestureDetector(
-                  onTap: () => setState(() => _secilenKarakter = 'ERKEK'),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    opacity: _secilenKarakter == 'ERKEK' ? 1.0 : 0.4,
-                    child: Image.asset('assets/erkek_ares.png', height: 250),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 50),
-            // DEVAM ET BUTONU
-            ElevatedButton(
-              onPressed: () => _devamEt(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E5FF),
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-              ),
-              child: const Text(
-                'DEVAM ET',
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+      body: Row(
+        children: [
+          // SOL TARAF: KADIN ARES
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _secimYap('KADIN'),
+              child: Image.asset(
+                'assets/kadin_ares.png', 
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
               ),
             ),
-          ],
-        ),
+          ),
+          // SAĞ TARAF: ERKEK ARES
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _secimYap('ERKEK'),
+              child: Image.asset(
+                'assets/erkek_ares.png', 
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
