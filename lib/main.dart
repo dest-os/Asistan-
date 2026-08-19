@@ -7,7 +7,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   
-  // Daha önce kaydedilmiş kullanıcı adı var mı kontrol et
+  // Kayıtlı isim var mı kontrol et
   final String? kullaniciAdi = prefs.getString('kullanici_adi');
 
   runApp(AresAsistanApp(
