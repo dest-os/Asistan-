@@ -1,7 +1,6 @@
 name: ares_asistan
-description: "ARES Yapay Zeka Asistanı Uygulaması"
+description: "Ares Asistan Projesi"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -10,8 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.2.2
-  cupertino_icons: ^1.0.6
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -20,6 +18,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
   assets:
-    - assets/
+    - assets/kadin_ares.png
+    - assets/erkek_ares.png
+    - assets/kadin_ares_ekrani.png
+    - assets/erkek_ares ekrani.png
+    - assets/logo.png
