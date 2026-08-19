@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'giris_ekrani.dart';
-import 'depolama_servisi.dart';
+import 'sohbet_ekrani.dart';
 
 void main() async {
+  // Flutter alt yapısının tam başlatılmasını sağlar
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Kullanıcının daha önce kayıt yapıp yapmadığını kontrol eder
+  final prefs = await SharedPreferences.getInstance();
+  final bool girisYapildi = prefs.getBool('giris_yapildi') ?? false;
 
-  // Çökme hatalarını konsola aktar
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint('Flutter Hata: ${details.exception}');
-  };
-
-  // Depolama servisini başlat
-  try {
-    await DepolamaServisi.init();
-  } catch (e) {
-    debugPrint('Depolama servisi hatası: $e');
-  }
-
-  runApp(const AresUygulamasi());
+  runApp(AresUygulamasi(girisYapildi: girisYapildi));
 }
 
 class AresUygulamasi extends StatelessWidget {
-  const AresUygulamasi({super.key});
+  final bool girisYapildi;
+
+  const AresUygulamasi({super.key, required this.girisYapildi});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ares',
+      title: 'ARES Yapay Zeka',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Colors.black,
-        primaryColor: const Color(0xFF2196F3),
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        primaryColor: const Color(0xFF1E1E1E),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF00E5FF),
+          secondary: Color(0xFF00E5FF),
+          surface: Color(0xFF1E1E1E),
+        ),
+        useMaterial3: true,
       ),
-      home: const GirisEkrani(),
+      // Eğer daha önce giriş yapıldıysa doğrudan SohbetEkrani'na, yapılmadıysa GirisEkrani'na yönlendirir
+      home: girisYapildi ? const SohbetEkrani() : const GirisEkrani(),
     );
   }
 }
