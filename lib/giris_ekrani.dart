@@ -11,7 +11,7 @@ class GirisEkrani extends StatefulWidget {
 
 class _GirisEkraniState extends State<GirisEkrani> {
   final TextEditingController _kullaniciAdiController = TextEditingController();
-  String _secilenKarakter = 'KADIN'; // Varsayılan seçim
+  String _secilenKarakter = 'KADIN';
 
   @override
   void dispose() {
@@ -19,7 +19,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
     super.dispose();
   }
 
-  // Kullanıcı tercihlerini telefon hafızasına kaydetme fonksiyonu
   Future<void> _kaydetVeDevamEt() async {
     final kullaniciAdi = _kullaniciAdiController.text.trim();
 
@@ -40,7 +39,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
     if (!mounted) return;
 
-    // Kayıt tamamlandıktan sonra doğrudan 2. ekrana (Sohbet Ekrana) geçiş
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SohbetEkrani()),
     );
@@ -58,11 +56,9 @@ class _GirisEkraniState extends State<GirisEkrani> {
             children: [
               const SizedBox(height: 20),
               
-              // Üst Kısım: Karakter Seçimleri ve Logo
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // ARES KADIN Seçim Alanı
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -84,7 +80,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
                           ),
                           child: const CircleAvatar(
                             radius: 40,
-                            backgroundImage: AssetImage('assets/images/ares_kadın.png'),
+                            backgroundImage: AssetImage('assets/kadin_ares.png'),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -112,9 +108,8 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // Orta Logo
                   Image.asset(
-                    'assets/images/logo.png',
+                    'assets/logo.png',
                     height: 80,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.remove_red_eye,
@@ -123,7 +118,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // ARES ERKEK Seçim Alanı
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -145,7 +139,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
                           ),
                           child: const CircleAvatar(
                             radius: 40,
-                            backgroundImage: AssetImage('assets/images/ares_erkek.png'),
+                            backgroundImage: AssetImage('assets/erkek_ares.png'),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -177,7 +171,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
               const SizedBox(height: 40),
 
-              // Kullanıcı Adı Giriş Alanı (Görselinizdeki Tasarıma Sadık)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
@@ -202,7 +195,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
               const SizedBox(height: 30),
 
-              // Devam Et / Başla Butonu
               SizedBox(
                 width: double.infinity,
                 height: 50,
