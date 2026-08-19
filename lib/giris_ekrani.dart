@@ -2,20 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'sohbet_ekrani.dart';
 
-class GirisEkrani extends StatefulWidget {
+class GirisEkrani extends StatelessWidget {
   const GirisEkrani({super.key});
 
-  @override
-  State<GirisEkrani> createState() => _GirisEkraniState();
-}
-
-class _GirisEkraniState extends State<GirisEkrani> {
-  
-  Future<void> _secimYap(String karakter) async {
+  Future<void> _secimYap(BuildContext context, String karakter) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('secilen_karakter', karakter);
     
-    if(!mounted) return;
+    if(!context.mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SohbetEkrani()),
     );
@@ -26,10 +20,10 @@ class _GirisEkraniState extends State<GirisEkrani> {
     return Scaffold(
       body: Row(
         children: [
-          // SOL TARAF: KADIN ARES
+          // KADIN
           Expanded(
             child: GestureDetector(
-              onTap: () => _secimYap('KADIN'),
+              onTap: () => _secimYap(context, 'KADIN'),
               child: Image.asset(
                 'assets/kadin_ares.png', 
                 fit: BoxFit.cover,
@@ -38,10 +32,10 @@ class _GirisEkraniState extends State<GirisEkrani> {
               ),
             ),
           ),
-          // SAĞ TARAF: ERKEK ARES
+          // ERKEK
           Expanded(
             child: GestureDetector(
-              onTap: () => _secimYap('ERKEK'),
+              onTap: () => _secimYap(context, 'ERKEK'),
               child: Image.asset(
                 'assets/erkek_ares.png', 
                 fit: BoxFit.cover,
