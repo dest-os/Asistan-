@@ -16,9 +16,13 @@ class _GirisEkraniState extends State<GirisEkrani> {
   Future<void> _devamEt() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('secilen_karakter', _secilenKarakter);
-    if (_kullaniciAdiController.text.isNotEmpty) {
-      await prefs.setString('kullanici_adi', _kullaniciAdiController.text);
+    
+    // Girilen ismi kaydet, boş bırakılırsa varsayılan Kullanıcı yap
+    String girilenIsim = _kullaniciAdiController.text.trim();
+    if (girilenIsim.isEmpty) {
+      girilenIsim = 'Kullanıcı';
     }
+    await prefs.setString('kullanici_adi', girilenIsim);
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -32,7 +36,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Orijinal Arka Plan Görseli
+          // Arka Plan Görseli
           Positioned.fill(
             child: Image.asset(
               'assets/giris_ekrani.png',
@@ -45,10 +49,13 @@ class _GirisEkraniState extends State<GirisEkrani> {
             left: 0,
             top: 0,
             width: MediaQuery.of(context).size.width * 0.35,
-            height: MediaQuery.of(context).size.height * 0.6,
+            height: MediaQuery.of(context).size.height * 0.5,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => setState(() => _secilenKarakter = 'KADIN'),
+              onTap: () {
+                setState(() => _secilenKarakter = 'KADIN');
+                _devamEt();
+              },
             ),
           ),
 
@@ -57,14 +64,17 @@ class _GirisEkraniState extends State<GirisEkrani> {
             right: 0,
             top: 0,
             width: MediaQuery.of(context).size.width * 0.35,
-            height: MediaQuery.of(context).size.height * 0.6,
+            height: MediaQuery.of(context).size.height * 0.5,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => setState(() => _secilenKarakter = 'ERKEK'),
+              onTap: () {
+                setState(() => _secilenKarakter = 'ERKEK');
+                _devamEt();
+              },
             ),
           ),
 
-          // Kullanıcı Adı Yazma Alanı
+          // Kullanıcı Adı Yazma Kutusu
           Positioned(
             left: MediaQuery.of(context).size.width * 0.42,
             top: MediaQuery.of(context).size.height * 0.53,
@@ -72,7 +82,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             height: 45,
             child: TextField(
               controller: _kullaniciAdiController,
-              style: const TextStyle(color: Colors.cyanAccent, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
               cursorColor: Colors.cyanAccent,
               decoration: const InputDecoration(
                 border: InputBorder.none,
