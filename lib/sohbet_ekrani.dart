@@ -1,92 +1,223 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:screenshot/screenshot.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'api_bilgisi.dart';
-import 'api_bilgisi_servisi.dart';
-import 'depolama_servisi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SohbetEkrani extends StatefulWidget {
-  final String kullaniciAdi;
-
-  const SohbetEkrani({Key? key, this.kullaniciAdi = 'Kullanıcı'})
-      : super(key: key);
+  const SohbetEkrani({super.key});
 
   @override
   State<SohbetEkrani> createState() => _SohbetEkraniState();
 }
 
 class _SohbetEkraniState extends State<SohbetEkrani> {
-  final ScreenshotController _screenshotController = ScreenshotController();
-  final ApiBilgisiServisi _apiBilgisiServisi = ApiBilgisiServisi();
-  String _konustuguMetin = '';
+  String _kullaniciAdi = '';
+  String _secilenKarakter = 'KADIN';
+  bool _yuklendi = false;
 
-  Future<void> _apiyeGonder() async {
-    ApiBilgisi? api = await DepolamaServisi.apiBilgisiGetir();
-    if (api != null && api.apiAdresi.isNotEmpty) {
-      final sonuc = await _apiBilgisiServisi.apiBilgisiGonder(api.apiAdresi, {
-        'metin': _konustuguMetin,
-      });
-      if (sonuc != null) {
-        setState(() {
-          _konustuguMetin = sonuc['cevap'] ?? '';
-        });
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _tercihleriYukle();
   }
 
-  Future<void> _paylas() async {
-    final imageBytes = await _screenshotController.capture();
-    if (imageBytes != null) {
-      final tempDir = await getTemporaryDirectory();
-      final file = await File('${tempDir.path}/ekran_goruntusu.png').create();
-      await file.writeAsBytes(imageBytes);
-      await Share.shareXFiles([XFile(file.path)]);
-    }
+  // Giriş ekranında kaydedilen verileri okuma
+  Future<void> _tercihleriYukle() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _kullaniciAdi = prefs.getString('kullanici_adi') ?? 'Kullanıcı';
+      _secilenKarakter = prefs.getString('secilen_karakter') ?? 'KADIN';
+      _yuklendi = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_yuklendi) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF000000),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Screenshot(
-        controller: _screenshotController,
-        child: SafeArea(
-          child: Column(
+      backgroundColor: const Color(0xFF000000),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
             children: [
-              const SizedBox(height: 20),
-              Text(
-                'Merhaba ${widget.kullaniciAdi}, senin icin ne yapabilirim?',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-              ),
-              const SizedBox(height: 20),
+              // 1. SOL PANEL (Seçilen Karakter Görseli ve Arama)
               Expanded(
-                child: Center(
-                  child: Text(
-                    _konustuguMetin.isEmpty
-                        ? 'Dinliyorum...'
-                        : _konustuguMetin,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                    textAlign: TextAlign.center,
+                flex: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF005580), width: 1.5),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          child: Image.asset(
+                            _secilenKarakter == 'KADIN'
+                                ? 'assets/images/ares_kadın.png'
+                                : 'assets/images/ares_erkek.png',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.person,
+                              size: 80,
+                              color: Color(0xFF00E5FF),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF005580)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.search, color: Colors.white54, size: 16),
+                            SizedBox(width: 4),
+                            Text('Arama', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
-                    onPressed: _apiyeGonder,
+
+              const SizedBox(width: 8),
+
+              // 2. ORTA PANEL (Ana Sohbet Alanı)
+              Expanded(
+                flex: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF005580), width: 1.5),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.share, color: Colors.green),
-                    onPressed: _paylas,
+                  child: Column(
+                    children: [
+                      // Üst Başlık Barı
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.menu, color: Colors.white70, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'ARES',
+                                style: TextStyle(
+                                  color: Color(0xFF00E5FF),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E5FF), size: 20),
+                            ],
+                          ),
+                          Icon(Icons.refresh, color: Colors.white70, size: 20),
+                        ],
+                      ),
+
+                      // Orta Karşılama Alanı
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Merhaba $_kullaniciAdi, senin için ne yapabilirim?',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Alt Giriş ve Butonlar Barı
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A0A0A),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: const Color(0xFF003355)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add, color: Colors.white54, size: 20),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Herhangi bir şey sor',
+                                style: TextStyle(color: Colors.white38, fontSize: 12),
+                              ),
+                            ),
+                            const Icon(Icons.mic_none, color: Colors.white70, size: 20),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0066FF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.graphic_eq, color: Colors.white, size: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 20),
+
+              const SizedBox(width: 8),
+
+              // 3. SAĞ PANEL (Logo ve Kaydet Butonu)
+              Expanded(
+                flex: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF005580), width: 1.5),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            height: 100,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.remove_red_eye,
+                              size: 60,
+                              color: Color(0xFF00E5FF),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF005580)),
+                        ),
+                        child: const Icon(Icons.save_outlined, color: Color(0xFF0066FF), size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
