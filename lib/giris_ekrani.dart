@@ -18,33 +18,38 @@ class GirisEkrani extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: [
-          // KADIN SEÇİMİ
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _secimYap(context, 'KADIN'),
-              child: Image.asset(
-                'assets/kadin_ares.png',
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Row(
+          children: [
+            // KADIN ARES
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _secimYap(context, 'KADIN'),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Image.asset(
+                    'assets/kadin_ares.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
-          ),
-          // ERKEK SEÇİMİ
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _secimYap(context, 'ERKEK'),
-              child: Image.asset(
-                'assets/erkek_ares.png',
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
+            // ERKEK ARES
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _secimYap(context, 'ERKEK'),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Image.asset(
+                    'assets/erkek_ares.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
