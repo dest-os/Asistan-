@@ -1,6 +1,7 @@
-name: ares_app
-description: Ares Yapay Zeka Asistan Uygulamasi
+name: ares_asistan
+description: "ARES Yapay Zeka Asistanı Uygulaması"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -9,11 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_secure_storage: ^9.0.0
   shared_preferences: ^2.2.2
-  http: ^1.2.0
-  screenshot: ^3.0.0
-  share_plus: ^10.0.0
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +20,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/
