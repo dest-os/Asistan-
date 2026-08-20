@@ -12,9 +12,8 @@ class SohbetEkrani extends StatefulWidget {
 }
 
 class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMixin {
-  String _bgImage = '';
+  String _bgImage = 'assets/erkek_ares_ekrani.png';
   String _kullaniciAdi = 'İbrahim';
-  String _secilenKarakter = 'ERKEK';
   bool _yuklendi = false;
 
   late stt.SpeechToText _speech;
@@ -43,6 +42,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
+    
+    // Erkek/Kadın ses tonu uyarlaması
+    if (karakter == 'ERKEK') {
+      await _tts.setPitch(0.8);  // Kalın erkek tonu
+      await _tts.setSpeechRate(0.45);
+    } else {
+      await _tts.setPitch(1.1);  // İnce kadın tonu
+      await _tts.setSpeechRate(0.5);
+    }
+
     try {
       List<dynamic> voices = await _tts.getVoices;
       for (var voice in voices) {
@@ -96,7 +105,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     if (mounted) {
       setState(() {
-        _secilenKarakter = secim;
         _bgImage = (secim == 'KADIN') ? 'assets/kadin_ares_ekrani.png' : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
         _yuklendi = true;
@@ -171,13 +179,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       );
     }
 
-    // YATAY EKRANA TAM OTURAN MİKROFON KOORDİNATLARI
+    // Ekran boyutuna göre orantılı mikrofon konumlandırması
     double micLeft = MediaQuery.of(context).size.width * 0.612;
     double micBottom = MediaQuery.of(context).size.height * 0.115;
     double micWidth = 46;
     double micHeight = 46;
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // ARKA PLAN
@@ -206,7 +215,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // MİKROFON BUTONU VE HALKA ANİMASYONU (ÇAKIŞMAYI ÖNLEYEN TEK KATMAN)
+          // MİKROFON VE ANİMASYON KATMANI
           Positioned(
             left: micLeft,
             bottom: micBottom,
@@ -224,7 +233,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 children: [
                   Container(color: Colors.transparent),
                   
-                  // Halka Efekti (Dinlerken veya Konuşurken Aktif)
+                  // Dinlerken veya Konuşurken Oluşan Halka ve Dalga
                   if (_dinliyor || _konusuyor)
                     AnimatedBuilder(
                       animation: _waveController,
@@ -232,9 +241,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         return Stack(
                           alignment: Alignment.center,
                           children: [
+                            // Dış Halka
                             Container(
-                              width: micWidth + (_waveController.value * 20),
-                              height: micHeight + (_waveController.value * 20),
+                              width: micWidth + (_waveController.value * 18),
+                              height: micHeight + (_waveController.value * 18),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -243,6 +253,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 ),
                               ),
                             ),
+                            // İç Çizgiler
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: List.generate(3, (i) {
