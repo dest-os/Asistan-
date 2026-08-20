@@ -86,27 +86,32 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // Kullanıcı Adı Giriş Kutusu
+          // Kullanıcı Adı Giriş Kutusu (Hizalaması Tam Oturtuldu)
           Positioned(
             left: MediaQuery.of(context).size.width * 0.42,
-            top: MediaQuery.of(context).size.height * 0.53,
+            top: MediaQuery.of(context).size.height * 0.56,
             width: MediaQuery.of(context).size.width * 0.31,
             height: 40,
             child: TextField(
               controller: _kullaniciAdiController,
-              style: const TextStyle(color: Colors.cyanAccent, fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.cyanAccent,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
               cursorColor: Colors.cyanAccent,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: '',
+                contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
 
-          // Alt İleri Ok Butonu (Yalnızca seçimler yapılınca aktif olur)
+          // Alt İleri Ok Butonu (Seçimler Yapılınca Aktif)
           Positioned(
-            bottom: 25,
+            bottom: 20,
             left: 0,
             right: 0,
             child: Center(
@@ -115,7 +120,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
                 borderRadius: BorderRadius.circular(30),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
                   decoration: BoxDecoration(
                     color: _formGecerli ? Colors.cyanAccent.withOpacity(0.2) : Colors.white10,
                     borderRadius: BorderRadius.circular(30),
