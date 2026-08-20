@@ -1,4 +1,4 @@
-import 'dartd:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -33,7 +33,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _tts = FlutterTts();
     _tts.setLanguage("tr-TR");
 
-    // Ares konuşurken mikrofonun kendi sesini dinlemesini engellemek için callback
     _tts.setCompletionHandler(() {
       setState(() => _konusuyor = false);
       if (!_sessizMod) {
@@ -97,7 +96,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     if (available && !_sessizMod && !_konusuyor) {
       _speech.listen(
         onResult: (result) {
-          // Sadece cümle tamamen tamamlandığında (finalResult) işlem yap
           if (result.finalResult) {
             _cevapVer(result.recognizedWords);
           }
@@ -109,7 +107,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   void _cevapVer(String girdi) async {
     if (girdi.trim().isEmpty || _konusuyor) return;
 
-    // Mikrofonu geçici olarak durdur ki kendi sesini dinlemesin
     await _speech.stop();
 
     String cevap = "Merhaba $_kullaniciAdi, ben Ares. Sana nasıl yardımcı olabilirim?";
@@ -123,7 +120,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     if (!_sessizMod) {
       await _tts.speak(cevap);
     } else {
-      // Sessiz modda konuşma bitti sayılır, dinlemeyi hemen tekrar başlatırız
       _otomatikDinlemeBaslat();
     }
   }
@@ -221,7 +217,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       children: List.generate(4, (index) {
                         double height = 8;
                         if (_dinliyor || _konusuyor) {
-                          height = 8 + Random().nextDouble() * 16 * _waveController.value;
+                          height = 8 + (Random().nextDouble() * 16 * _waveController.value);
                         }
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 2),
