@@ -147,8 +147,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // + İkonuna basıldığında açılan menü
-  void _artıMenusuAc() {
+  void _artiMenusuAc() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black87,
@@ -276,9 +275,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Artı (+) İkonu
                 GestureDetector(
-                  onTap: _artıMenusuAc,
+                  onTap: _artiMenusuAc,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -290,7 +288,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Mikrofon İkonu
                 GestureDetector(
                   onTap: _sessizModDegistir,
                   child: ScaleTransition(
@@ -318,7 +315,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Ses Dalgaları (Wave)
                 AnimatedBuilder(
                   animation: _waveController,
                   builder: (context, child) {
