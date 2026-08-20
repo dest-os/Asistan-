@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dartd:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -16,15 +16,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   String _kullaniciAdi = 'Kullanıcı';
   bool _yuklendi = false;
 
-  // Ses & Konuşma
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
   String _metin = "Seni dinliyorum...";
-  bool _sessizMod = false; // Mute / Sessiz Mod kontrolü
+  bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
 
-  // Animasyonlar
   late AnimationController _pulseController;
   late AnimationController _waveController;
 
@@ -35,7 +33,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _tts = FlutterTts();
     _tts.setLanguage("tr-TR");
 
-    // Mikrofon Halka Animasyonu (Nefes Alma Efekti)
+    // Ares konuşurken mikrofonun kendi sesini dinlemesini engellemek için callback
+    _tts.setCompletionHandler(() {
+      setState(() => _konusuyor = false);
+      if (!_sessizMod) {
+        _otomatikDinlemeBaslat();
+      }
+    });
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -43,7 +48,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       upperBound: 1.2,
     )..repeat(reverse: true);
 
-    // Ses Dalga Animasyonu
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -78,21 +82,22 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   void _otomatikDinlemeBaslat() async {
-    if (_sessizMod) return;
+    if (_sessizMod || _konusuyor) return;
 
     bool available = await _speech.initialize(
       onStatus: (status) {
         if (status == 'listening') {
           setState(() => _dinliyor = true);
-        } else {
+        } else if (status == 'notListening' || status == 'done') {
           setState(() => _dinliyor = false);
         }
       },
     );
 
-    if (available && !_sessizMod) {
+    if (available && !_sessizMod && !_konusuyor) {
       _speech.listen(
         onResult: (result) {
+          // Sadece cümle tamamen tamamlandığında (finalResult) işlem yap
           if (result.finalResult) {
             _cevapVer(result.recognizedWords);
           }
@@ -102,23 +107,24 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   void _cevapVer(String girdi) async {
-    if (girdi.isEmpty) return;
+    if (girdi.trim().isEmpty || _konusuyor) return;
 
-    String cevap = "Merhaba $_kullaniciAdi, seni duydum!";
-    if (girdi.toLowerCase().contains("merhaba")) {
-      cevap = "Merhaba $_kullaniciAdi, ben Ares. Sana nasıl yardımcı olabilirim?";
-    }
+    // Mikrofonu geçici olarak durdur ki kendi sesini dinlemesin
+    await _speech.stop();
+
+    String cevap = "Merhaba $_kullaniciAdi, ben Ares. Sana nasıl yardımcı olabilirim?";
 
     setState(() {
       _metin = cevap;
       _konusuyor = !_sessizMod;
+      _dinliyor = false;
     });
 
-    // Sessiz modda değilse sesli oku
     if (!_sessizMod) {
       await _tts.speak(cevap);
-      setState(() => _konusuyor = false);
-      _otomatikDinlemeBaslat(); // Cevap bitince tekrar dinlemeye geç
+    } else {
+      // Sessiz modda konuşma bitti sayılır, dinlemeyi hemen tekrar başlatırız
+      _otomatikDinlemeBaslat();
     }
   }
 
@@ -150,12 +156,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return Scaffold(
       body: Stack(
         children: [
-          // Arka Plan Görseli
           Positioned.fill(
             child: Image.asset(_bgImage, fit: BoxFit.fill),
           ),
-
-          // Karşılama ve Sohbet Metni Kutusu
           Positioned(
             left: MediaQuery.of(context).size.width * 0.26,
             right: MediaQuery.of(context).size.width * 0.30,
@@ -177,15 +180,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               ),
             ),
           ),
-
-          // Alt İkonlar & Animasyon Modülü (Mikrofon ve Frekans)
           Positioned(
             left: MediaQuery.of(context).size.width * 0.58,
             bottom: MediaQuery.of(context).size.height * 0.08,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Mikrofon İkonu & Halka Animasyonu (Sessiz Mod Butonu)
                 GestureDetector(
                   onTap: _sessizModDegistir,
                   child: ScaleTransition(
@@ -213,8 +213,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Ses Frekansı (Çubuklar) Animasyonu
                 AnimatedBuilder(
                   animation: _waveController,
                   builder: (context, child) {
