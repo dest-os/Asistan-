@@ -13,7 +13,8 @@ class SohbetEkrani extends StatefulWidget {
 
 class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMixin {
   String _bgImage = '';
-  String _kullaniciAdi = 'Kullanıcı';
+  String _kullaniciAdi = 'İbrahim';
+  String _secilenKarakter = 'ERKEK';
   bool _yuklendi = false;
 
   late stt.SpeechToText _speech;
@@ -32,8 +33,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
     
-    _initTts();
-
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -42,32 +41,41 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _yukle();
   }
 
-  void _initTts() async {
+  Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
-    
-    _tts.setStartHandler(() {
-      if (mounted) {
-        setState(() {
-          _konusuyor = true;
-        });
+    try {
+      List<dynamic> voices = await _tts.getVoices;
+      for (var voice in voices) {
+        if (voice is Map) {
+          String name = voice["name"].toString().toLowerCase();
+          String locale = voice["locale"].toString().toLowerCase();
+          
+          if (locale.contains("tr")) {
+            if (karakter == 'ERKEK' && (name.contains("male") || name.contains("erkek") || name.contains("tr-x-android"))) {
+              await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+              break;
+            } else if (karakter == 'KADIN' && (name.contains("female") || name.contains("kadin"))) {
+              await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+              break;
+            }
+          }
+        }
       }
+    } catch (_) {}
+
+    _tts.setStartHandler(() {
+      if (mounted) setState(() => _konusuyor = true);
     });
-    
+
     _tts.setCompletionHandler(() {
       if (mounted) {
-        setState(() {
-          _konusuyor = false;
-        });
+        setState(() => _konusuyor = false);
         if (!_sessizMod) _otomatikDinlemeBaslat();
       }
     });
 
-    _tts.setErrorHandler((msg) {
-      if (mounted) {
-        setState(() {
-          _konusuyor = false;
-        });
-      }
+    _tts.setErrorHandler((_) {
+      if (mounted) setState(() => _konusuyor = false);
     });
   }
 
@@ -81,11 +89,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
-    String secim = prefs.getString('secilen_karakter') ?? 'KADIN';
-    String kayitliIsim = prefs.getString('kullanici_adi') ?? 'Kullanıcı';
+    String secim = prefs.getString('secilen_karakter') ?? 'ERKEK';
+    String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
+
+    await _sesAyarla(secim);
 
     if (mounted) {
       setState(() {
+        _secilenKarakter = secim;
         _bgImage = (secim == 'KADIN') ? 'assets/kadin_ares_ekrani.png' : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
         _yuklendi = true;
@@ -96,7 +107,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   void _otomatikDinlemeBaslat() async {
     if (_sessizMod || _konusuyor) return;
-    
+
     try {
       bool available = await _speech.initialize(
         onStatus: (status) {
@@ -106,21 +117,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             });
           }
         },
-        onError: (errorNotification) {
-          if (mounted) {
-            setState(() {
-              _dinliyor = false;
-            });
-          }
+        onError: (_) {
+          if (mounted) setState(() => _dinliyor = false);
         },
       );
-      
+
       if (available && !_sessizMod && !_konusuyor) {
-        if (mounted) {
-          setState(() {
-            _dinliyor = true;
-          });
-        }
+        if (mounted) setState(() => _dinliyor = true);
         _speech.listen(
           onResult: (result) {
             if (result.finalResult) {
@@ -129,12 +132,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           },
         );
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _dinliyor = false;
-        });
-      }
+    } catch (_) {
+      if (mounted) setState(() => _dinliyor = false);
     }
   }
 
@@ -147,23 +146,19 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _metin = "Düşünüyor...";
       });
     }
-    
+
     String cevap = "Merhaba $_kullaniciAdi, ben Ares.";
-    
+
     if (mounted) {
       setState(() {
         _metin = cevap;
       });
     }
-    
+
     if (!_sessizMod) {
       await _tts.speak(cevap);
     } else {
-      if (mounted) {
-        setState(() {
-          _konusuyor = false;
-        });
-      }
+      if (mounted) setState(() => _konusuyor = false);
     }
   }
 
@@ -176,44 +171,42 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       );
     }
 
-    // MİKROFON BUTONUNUN KOORDİNATLARI (TASARIM SABİT)
-    double micLeft = MediaQuery.of(context).size.width * 0.665;
-    double micBottom = MediaQuery.of(context).size.height * 0.08;
-    double micWidth = 50;
-    double micHeight = 50;
+    // YATAY EKRANA TAM OTURAN MİKROFON KOORDİNATLARI
+    double micLeft = MediaQuery.of(context).size.width * 0.612;
+    double micBottom = MediaQuery.of(context).size.height * 0.115;
+    double micWidth = 46;
+    double micHeight = 46;
 
     return Scaffold(
       body: Stack(
         children: [
-          // ARKA PLAN GÖRSELİ
+          // ARKA PLAN
           Positioned.fill(
             child: Image.asset(
-              _bgImage, 
+              _bgImage,
               fit: BoxFit.fill,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(color: Colors.black);
-              },
+              errorBuilder: (_, __, ___) => Container(color: Colors.black),
             ),
           ),
 
-          // METİN KUTUSU
+          // YAZI ALANI
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.26,
-            right: MediaQuery.of(context).size.width * 0.30,
-            top: MediaQuery.of(context).size.height * 0.38,
-            height: 75,
+            left: MediaQuery.of(context).size.width * 0.28,
+            right: MediaQuery.of(context).size.width * 0.32,
+            top: MediaQuery.of(context).size.height * 0.42,
+            height: 80,
             child: Container(
-              color: Colors.black, 
-              alignment: Alignment.center, 
+              color: Colors.transparent,
+              alignment: Alignment.center,
               child: Text(
-                _metin, 
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                _metin,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
                 textAlign: TextAlign.center,
               ),
             ),
           ),
 
-          // MİKROFON BUTONU (TIKLANABİLİR KATMAN)
+          // MİKROFON BUTONU VE HALKA ANİMASYONU (ÇAKIŞMAYI ÖNLEYEN TEK KATMAN)
           Positioned(
             left: micLeft,
             bottom: micBottom,
@@ -226,59 +219,52 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   _otomatikDinlemeBaslat();
                 }
               },
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-
-          // ANİMASYON KATMANI (DİNLEME VEYA KONUŞMA ANINDA GÖRÜNÜR)
-          if (_dinliyor || _konusuyor)
-            Positioned(
-              left: micLeft,
-              bottom: micBottom,
-              width: micWidth,
-              height: micHeight,
-              child: IgnorePointer(
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _waveController,
-                    builder: (context, child) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Dışarıya Doğru Genişleyen Halka
-                          Container(
-                            width: micWidth + (_waveController.value * 25),
-                            height: micHeight + (_waveController.value * 25),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)), 
-                                width: 2,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(color: Colors.transparent),
+                  
+                  // Halka Efekti (Dinlerken veya Konuşurken Aktif)
+                  if (_dinliyor || _konusuyor)
+                    AnimatedBuilder(
+                      animation: _waveController,
+                      builder: (context, child) {
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: micWidth + (_waveController.value * 20),
+                              height: micHeight + (_waveController.value * 20),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
+                                  width: 2.5,
+                                ),
                               ),
                             ),
-                          ),
-                          // Ortadaki Ses Çizgileri
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: List.generate(3, (i) {
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                width: 3,
-                                height: 12 + (sin((_waveController.value * 2 * pi) + (i * 0.8)).abs() * 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.cyan,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(3, (i) {
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                  width: 3,
+                                  height: 10 + (sin((_waveController.value * 2 * pi) + (i * 0.8)).abs() * 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.cyan,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );
