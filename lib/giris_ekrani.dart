@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'sohbet_ekrani.dart';
 
 class GirisEkrani extends StatefulWidget {
@@ -20,14 +21,26 @@ class _GirisEkraniState extends State<GirisEkrani> {
   Future<void> _devamEt() async {
     if (!_formGecerli) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('secilen_karakter', _secilenKarakter!);
-    await prefs.setString('kullanici_adi', _kullaniciAdiController.text.trim());
+    PermissionStatus status = await Permission.microphone.request();
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const SohbetEkrani()),
-    );
+    if (status.isGranted) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('secilen_karakter', _secilenKarakter!);
+      await prefs.setString('kullanici_adi', _kullaniciAdiController.text.trim());
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SohbetEkrani()),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Ares'in sizi duyabilmesi için mikrofon izni vermeniz gerekmektedir."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -86,7 +99,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // Kullanıcı Adı Giriş Kutusu (Hizalaması Tam Oturtuldu)
+          // Kullanıcı Adı Giriş Kutusu (Hizalı)
           Positioned(
             left: MediaQuery.of(context).size.width * 0.42,
             top: MediaQuery.of(context).size.height * 0.56,
@@ -109,7 +122,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
             ),
           ),
 
-          // Alt İleri Ok Butonu (Seçimler Yapılınca Aktif)
+          // Alt İleri Ok Butonu (DEVAM ET)
           Positioned(
             bottom: 20,
             left: 0,
