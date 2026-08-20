@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 class SohbetEkrani extends StatefulWidget {
   const SohbetEkrani({super.key});
@@ -18,6 +20,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
+  final ImagePicker _picker = ImagePicker();
+
   String _metin = "Seni dinliyorum...";
   bool _sessizMod = false;
   bool _dinliyor = false;
@@ -143,6 +147,96 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  // + İkonuna basıldığında açılan menü
+  void _artıMenusuAc() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white30,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.remove_red_eye, color: Colors.cyan),
+                title: const Text('Canlı Algıla (Kamera Modu)', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Kamerayı açıp etrafı incelemesini sağla', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _fotografCek();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: Colors.cyan),
+                title: const Text('Fotoğraf Çek', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _fotografCek();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.cyan),
+                title: const Text('Galeriden Görsel Seç', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _galeridenSec();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.attach_file, color: Colors.cyan),
+                title: const Text('Belge / Dosya Yükle', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _dosyaSec();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _fotografCek() async {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo != null) {
+      setState(() {
+        _metin = "Görsel alındı, inceleniyor...";
+      });
+    }
+  }
+
+  Future<void> _galeridenSec() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _metin = "Görsel galeriden yüklendi.";
+      });
+    }
+  }
+
+  Future<void> _dosyaSec() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null) {
+      setState(() {
+        _metin = "Dosya yüklendi: ${result.files.first.name}";
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_yuklendi) {
@@ -182,6 +276,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Artı (+) İkonu
+                GestureDetector(
+                  onTap: _artıMenusuAc,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.1),
+                      border: Border.all(color: Colors.white30, width: 1.5),
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 22),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Mikrofon İkonu
                 GestureDetector(
                   onTap: _sessizModDegistir,
                   child: ScaleTransition(
@@ -209,6 +318,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Ses Dalgaları (Wave)
                 AnimatedBuilder(
                   animation: _waveController,
                   builder: (context, child) {
