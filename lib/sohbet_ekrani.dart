@@ -43,36 +43,34 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _yukle();
   }
 
+  // KESİN ERKEK SESİ MOTORU
   Future<void> _sesAyarla(String karakter) async {
+    await _tts.stop();
     await _tts.setLanguage("tr-TR");
-    
-    if (karakter == 'ERKEK') {
-      await _tts.setPitch(0.85);
-      await _tts.setSpeechRate(0.48);
-    } else {
-      await _tts.setPitch(1.1);
-      await _tts.setSpeechRate(0.5);
-    }
 
-    try {
-      List<dynamic> voices = await _tts.getVoices;
-      for (var voice in voices) {
-        if (voice is Map) {
-          String name = voice["name"].toString().toLowerCase();
-          String locale = voice["locale"].toString().toLowerCase();
-          
-          if (locale.contains("tr")) {
-            if (karakter == 'ERKEK' && (name.contains("male") || name.contains("erkek") || name.contains("tr-x-android"))) {
-              await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
-              break;
-            } else if (karakter == 'KADIN' && (name.contains("female") || name.contains("kadin"))) {
+    if (karakter == 'ERKEK') {
+      // Donanımsal Ses Frekansı (Erkek Bas Tonu)
+      await _tts.setPitch(0.4); 
+      await _tts.setSpeechRate(0.42);
+
+      try {
+        List<dynamic> voices = await _tts.getVoices;
+        for (var voice in voices) {
+          if (voice is Map) {
+            String name = voice["name"].toString().toLowerCase();
+            String locale = voice["locale"].toString().toLowerCase();
+
+            if (locale.contains("tr") && (name.contains("male") || name.contains("erkek") || name.contains("tr-x") || name.contains("byk"))) {
               await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
               break;
             }
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    } else {
+      await _tts.setPitch(1.1);
+      await _tts.setSpeechRate(0.5);
+    }
 
     _tts.setStartHandler(() {
       if (mounted) setState(() => _konusuyor = true);
@@ -172,44 +170,58 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // + BUTONU İŞLEVİ (ARAÇ / MEDYA EKLEME)
+  // ÖZELLEŞTİRİLMİŞ ÖZEL SİBERPUNK ALT PANEL
   void _artibutonIslevi() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(16),
-          height: 180,
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF08090C).withOpacity(0.95),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.cyan.withOpacity(0.6), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.cyan.withOpacity(0.25),
+                blurRadius: 20,
+                spreadRadius: 2,
+              )
+            ],
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
+                width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 15),
-                decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.cyan.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _eklemeSecenegi(
-                    icon: Icons.image,
+                    icon: Icons.photo_library_outlined,
                     label: "Galeri",
                     onTap: () async {
                       Navigator.pop(context);
                       try {
                         final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
                         if (image != null && mounted) {
-                          setState(() => _metin = "Görsel seçildi: ${image.name}");
+                          setState(() => _metin = "Görsel yüklendi: ${image.name}");
                         }
                       } catch (_) {}
                     },
                   ),
                   _eklemeSecenegi(
-                    icon: Icons.camera_alt,
+                    icon: Icons.camera_alt_outlined,
                     label: "Kamera",
                     onTap: () async {
                       Navigator.pop(context);
@@ -222,14 +234,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                     },
                   ),
                   _eklemeSecenegi(
-                    icon: Icons.insert_drive_file,
+                    icon: Icons.folder_open_outlined,
                     label: "Dosya",
                     onTap: () async {
                       Navigator.pop(context);
                       try {
                         FilePickerResult? result = await FilePicker.platform.pickFiles();
                         if (result != null && mounted) {
-                          setState(() => _metin = "Dosya yüklendi: ${result.files.single.name}");
+                          setState(() => _metin = "Dosya seçildi: ${result.files.single.name}");
                         }
                       } catch (_) {}
                     },
@@ -249,13 +261,27 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.cyan.withOpacity(0.2),
-            child: Icon(icon, color: Colors.cyan),
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black,
+              border: Border.all(color: Colors.cyan, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyan.withOpacity(0.3),
+                  blurRadius: 8,
+                )
+              ],
+            ),
+            child: Icon(icon, color: Colors.cyan, size: 24),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -270,7 +296,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       );
     }
 
-    // Mikrofon ve Buton Koordinatları
     double micLeft = MediaQuery.of(context).size.width * 0.612;
     double micBottom = MediaQuery.of(context).size.height * 0.115;
     double micWidth = 46;
@@ -292,7 +317,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // YAZI ALANI (Arkadaki Görsel Yazısını %100 Kapatır)
+          // YAZI ALANI (Görsel üzerindeki eski metni tam örter)
           Positioned(
             left: MediaQuery.of(context).size.width * 0.27,
             right: MediaQuery.of(context).size.width * 0.31,
@@ -304,7 +329,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 _metin,
                 style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -313,7 +338,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // + (ARTI) BUTONU ISLEVI
+          // + (ARTI) BUTONU DOKUNMA ALANI
           Positioned(
             left: plusLeft,
             bottom: plusBottom,
@@ -326,7 +351,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // MİKROFON VE ANİMASYON KATMANI
+          // MİKROFON VE ANİMASYON HAKASI
           Positioned(
             left: micLeft,
             bottom: micBottom,
