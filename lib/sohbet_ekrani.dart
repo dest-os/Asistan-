@@ -42,13 +42,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     return Scaffold(
       body: Stack(
         children: [
+          // Arka Plan Orijinal Görsel
           Positioned.fill(
             child: Image.asset(
               _bgImage,
               fit: BoxFit.fill,
             ),
           ),
-          // Resimdeki Sabit Yazıyı Kapatıp Tam Ortalanmış Dinamik Metin Alanı
+
+          // Karşılama Metni Görsel Maskeleme Alanı
           Positioned(
             left: MediaQuery.of(context).size.width * 0.26,
             right: MediaQuery.of(context).size.width * 0.30,
