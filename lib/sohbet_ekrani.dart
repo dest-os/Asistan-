@@ -155,7 +155,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
-                color: Colors.black90,
+                color: Color(0xEA000000),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 border: Border(
                   top: BorderSide(color: Colors.cyan, width: 1.5),
@@ -345,7 +345,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.black90,
+          backgroundColor: const Color(0xEA000000),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
             side: const BorderSide(color: Colors.cyan, width: 1),
@@ -393,9 +393,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  void _sosyalMedyaSec(String tür) {
+  void _sosyalMedyaSec(String tur) {
     setState(() {
-      _metin = "$tür verisi aktarımı bekleniyor...";
+      _metin = "$tur verisi aktarımı bekleniyor...";
     });
   }
 
