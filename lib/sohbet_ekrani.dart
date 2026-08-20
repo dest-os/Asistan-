@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -10,15 +11,22 @@ class SohbetEkrani extends StatefulWidget {
   State<SohbetEkrani> createState() => _SohbetEkraniState();
 }
 
-class _SohbetEkraniState extends State<SohbetEkrani> {
+class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMixin {
   String _bgImage = '';
   String _kullaniciAdi = 'Kullanıcı';
   bool _yuklendi = false;
-  
-  // Ses işlemleri için tanımlamalar
+
+  // Ses & Konuşma
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
-  String _metin = "Merhaba, seni dinliyorum...";
+  String _metin = "Seni dinliyorum...";
+  bool _sessizMod = false; // Mute / Sessiz Mod kontrolü
+  bool _dinliyor = false;
+  bool _konusuyor = false;
+
+  // Animasyonlar
+  late AnimationController _pulseController;
+  late AnimationController _waveController;
 
   @override
   void initState() {
@@ -26,7 +34,31 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
     _tts.setLanguage("tr-TR");
+
+    // Mikrofon Halka Animasyonu (Nefes Alma Efekti)
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+      lowerBound: 0.8,
+      upperBound: 1.2,
+    )..repeat(reverse: true);
+
+    // Ses Dalga Animasyonu
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+
     _yukle();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _waveController.dispose();
+    _speech.stop();
+    _tts.stop();
+    super.dispose();
   }
 
   Future<void> _yukle() async {
@@ -41,27 +73,71 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
       _kullaniciAdi = kayitliIsim;
       _yuklendi = true;
     });
-    
-    // Uygulama açılınca dinlemeye başla
-    _dinlemeyiBaslat();
+
+    _otomatikDinlemeBaslat();
   }
 
-  void _dinlemeyiBaslat() async {
-    bool available = await _speech.initialize();
-    if (available) {
-      _speech.listen(onResult: (result) {
-        if (result.finalResult) {
-          _cevapVer(result.recognizedWords);
+  void _otomatikDinlemeBaslat() async {
+    if (_sessizMod) return;
+
+    bool available = await _speech.initialize(
+      onStatus: (status) {
+        if (status == 'listening') {
+          setState(() => _dinliyor = true);
+        } else {
+          setState(() => _dinliyor = false);
         }
-      });
+      },
+    );
+
+    if (available && !_sessizMod) {
+      _speech.listen(
+        onResult: (result) {
+          if (result.finalResult) {
+            _cevapVer(result.recognizedWords);
+          }
+        },
+      );
     }
   }
 
   void _cevapVer(String girdi) async {
+    if (girdi.isEmpty) return;
+
+    String cevap = "Merhaba $_kullaniciAdi, seni duydum!";
     if (girdi.toLowerCase().contains("merhaba")) {
-      String cevap = "Merhaba $_kullaniciAdi, ben Ares. Sana nasıl yardımcı olabilirim?";
-      setState(() => _metin = cevap);
+      cevap = "Merhaba $_kullaniciAdi, ben Ares. Sana nasıl yardımcı olabilirim?";
+    }
+
+    setState(() {
+      _metin = cevap;
+      _konusuyor = !_sessizMod;
+    });
+
+    // Sessiz modda değilse sesli oku
+    if (!_sessizMod) {
       await _tts.speak(cevap);
+      setState(() => _konusuyor = false);
+      _otomatikDinlemeBaslat(); // Cevap bitince tekrar dinlemeye geç
+    }
+  }
+
+  void _sessizModDegistir() async {
+    setState(() {
+      _sessizMod = !_sessizMod;
+    });
+
+    if (_sessizMod) {
+      await _speech.stop();
+      await _tts.stop();
+      setState(() {
+        _dinliyor = false;
+        _konusuyor = false;
+        _metin = "Sessiz Mod Aktif (Sadece Yazı)";
+      });
+    } else {
+      setState(() => _metin = "Seni dinliyorum...");
+      _otomatikDinlemeBaslat();
     }
   }
 
@@ -74,14 +150,17 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
     return Scaffold(
       body: Stack(
         children: [
+          // Arka Plan Görseli
           Positioned.fill(
             child: Image.asset(_bgImage, fit: BoxFit.fill),
           ),
+
+          // Karşılama ve Sohbet Metni Kutusu
           Positioned(
             left: MediaQuery.of(context).size.width * 0.26,
             right: MediaQuery.of(context).size.width * 0.30,
             top: MediaQuery.of(context).size.height * 0.38,
-            height: 70,
+            height: 75,
             child: Container(
               color: Colors.black,
               alignment: Alignment.center,
@@ -91,10 +170,75 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w400,
+                  height: 1.3,
                 ),
               ),
+            ),
+          ),
+
+          // Alt İkonlar & Animasyon Modülü (Mikrofon ve Frekans)
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.58,
+            bottom: MediaQuery.of(context).size.height * 0.08,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Mikrofon İkonu & Halka Animasyonu (Sessiz Mod Butonu)
+                GestureDetector(
+                  onTap: _sessizModDegistir,
+                  child: ScaleTransition(
+                    scale: _dinliyor ? _pulseController : const AlwaysStoppedAnimation(1.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _sessizMod 
+                            ? Colors.red.withOpacity(0.2) 
+                            : (_dinliyor ? Colors.cyan.withOpacity(0.3) : Colors.transparent),
+                        border: Border.all(
+                          color: _sessizMod 
+                              ? Colors.red 
+                              : (_dinliyor ? Colors.cyan : Colors.transparent),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        _sessizMod ? Icons.mic_off : Icons.mic,
+                        color: _sessizMod ? Colors.red : (_dinliyor ? Colors.cyan : Colors.white),
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Ses Frekansı (Çubuklar) Animasyonu
+                AnimatedBuilder(
+                  animation: _waveController,
+                  builder: (context, child) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(4, (index) {
+                        double height = 8;
+                        if (_dinliyor || _konusuyor) {
+                          height = 8 + Random().nextDouble() * 16 * _waveController.value;
+                        }
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          width: 3,
+                          height: height,
+                          decoration: BoxDecoration(
+                            color: (_dinliyor || _konusuyor) ? Colors.cyan : Colors.white54,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ],
