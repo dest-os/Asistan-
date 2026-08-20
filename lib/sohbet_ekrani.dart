@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 class SohbetEkrani extends StatefulWidget {
   const SohbetEkrani({super.key});
@@ -18,6 +20,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
+  final ImagePicker _picker = ImagePicker();
 
   String _metin = "Seni dinliyorum...";
   bool _sessizMod = false;
@@ -43,12 +46,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
     
-    // Erkek/Kadın ses tonu uyarlaması
     if (karakter == 'ERKEK') {
-      await _tts.setPitch(0.8);  // Kalın erkek tonu
-      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(0.85);
+      await _tts.setSpeechRate(0.48);
     } else {
-      await _tts.setPitch(1.1);  // İnce kadın tonu
+      await _tts.setPitch(1.1);
       await _tts.setSpeechRate(0.5);
     }
 
@@ -170,6 +172,95 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  // + BUTONU İŞLEVİ (ARAÇ / MEDYA EKLEME)
+  void _artibutonIslevi() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 180,
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 15),
+                decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _eklemeSecenegi(
+                    icon: Icons.image,
+                    label: "Galeri",
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                        if (image != null && mounted) {
+                          setState(() => _metin = "Görsel seçildi: ${image.name}");
+                        }
+                      } catch (_) {}
+                    },
+                  ),
+                  _eklemeSecenegi(
+                    icon: Icons.camera_alt,
+                    label: "Kamera",
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                        if (photo != null && mounted) {
+                          setState(() => _metin = "Fotoğraf çekildi.");
+                        }
+                      } catch (_) {}
+                    },
+                  ),
+                  _eklemeSecenegi(
+                    icon: Icons.insert_drive_file,
+                    label: "Dosya",
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        FilePickerResult? result = await FilePicker.platform.pickFiles();
+                        if (result != null && mounted) {
+                          setState(() => _metin = "Dosya yüklendi: ${result.files.single.name}");
+                        }
+                      } catch (_) {}
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _eklemeSecenegi({required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Colors.cyan.withOpacity(0.2),
+            child: Icon(icon, color: Colors.cyan),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_yuklendi) {
@@ -179,17 +270,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       );
     }
 
-    // Ekran boyutuna göre orantılı mikrofon konumlandırması
+    // Mikrofon ve Buton Koordinatları
     double micLeft = MediaQuery.of(context).size.width * 0.612;
     double micBottom = MediaQuery.of(context).size.height * 0.115;
     double micWidth = 46;
     double micHeight = 46;
 
+    double plusLeft = MediaQuery.of(context).size.width * 0.278;
+    double plusBottom = MediaQuery.of(context).size.height * 0.115;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ARKA PLAN
+          // ARKA PLAN GÖRSELİ
           Positioned.fill(
             child: Image.asset(
               _bgImage,
@@ -198,20 +292,37 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // YAZI ALANI
+          // YAZI ALANI (Arkadaki Görsel Yazısını %100 Kapatır)
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.28,
-            right: MediaQuery.of(context).size.width * 0.32,
-            top: MediaQuery.of(context).size.height * 0.42,
-            height: 80,
+            left: MediaQuery.of(context).size.width * 0.27,
+            right: MediaQuery.of(context).size.width * 0.31,
+            top: MediaQuery.of(context).size.height * 0.36,
+            height: 100,
             child: Container(
-              color: Colors.transparent,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+              ),
               alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
                 _metin,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
+            ),
+          ),
+
+          // + (ARTI) BUTONU ISLEVI
+          Positioned(
+            left: plusLeft,
+            bottom: plusBottom,
+            width: micWidth,
+            height: micHeight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _artibutonIslevi,
+              child: Container(color: Colors.transparent),
             ),
           ),
 
@@ -233,7 +344,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 children: [
                   Container(color: Colors.transparent),
                   
-                  // Dinlerken veya Konuşurken Oluşan Halka ve Dalga
                   if (_dinliyor || _konusuyor)
                     AnimatedBuilder(
                       animation: _waveController,
@@ -241,7 +351,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         return Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Dış Halka
                             Container(
                               width: micWidth + (_waveController.value * 18),
                               height: micHeight + (_waveController.value * 18),
@@ -253,7 +362,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 ),
                               ),
                             ),
-                            // İç Çizgiler
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: List.generate(3, (i) {
