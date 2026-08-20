@@ -86,7 +86,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     if (mounted) {
       setState(() {
-        // Türkçe karakter ve boşluk sorunları düzeltilmiş dosya adları
         _bgImage = (secim == 'KADIN') ? 'assets/kadin_ares_ekrani.png' : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
         _yuklendi = true;
@@ -186,19 +185,18 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return Scaffold(
       body: Stack(
         children: [
-          // Arka Plan Görseli
+          // ARKA PLAN GÖRSELİ
           Positioned.fill(
             child: Image.asset(
               _bgImage, 
               fit: BoxFit.fill,
               errorBuilder: (context, error, stackTrace) {
-                // Görsel yüklenemezse siyah ekran basıp çökmesini önler
                 return Container(color: Colors.black);
               },
             ),
           ),
 
-          // Metin Kutusu
+          // METİN KUTUSU
           Positioned(
             left: MediaQuery.of(context).size.width * 0.26,
             right: MediaQuery.of(context).size.width * 0.30,
