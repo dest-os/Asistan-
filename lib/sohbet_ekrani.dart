@@ -27,7 +27,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   bool _dinliyor = false;
   bool _konusuyor = false;
 
-  late AnimationController _pulseController;
+  List<String> _ozelAraclar = [];
+
   late AnimationController _waveController;
 
   @override
@@ -44,13 +45,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     });
 
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-      lowerBound: 0.8,
-      upperBound: 1.2,
-    )..repeat(reverse: true);
-
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -61,7 +55,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _waveController.dispose();
     _speech.stop();
     _tts.stop();
@@ -72,12 +65,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     final prefs = await SharedPreferences.getInstance();
     String secim = prefs.getString('secilen_karakter') ?? 'KADIN';
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'Kullanıcı';
+    List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
 
     setState(() {
       _bgImage = (secim == 'KADIN')
           ? 'assets/kadin_ares_ekrani.png'
           : 'assets/erkek_ares ekrani.png';
       _kullaniciAdi = kayitliIsim;
+      _ozelAraclar = eklenenler;
       _yuklendi = true;
     });
 
@@ -150,53 +145,242 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   void _artiMenusuAc() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black87,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white30,
-                  borderRadius: BorderRadius.circular(2),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.black90,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                border: Border(
+                  top: BorderSide(color: Colors.cyan, width: 1.5),
                 ),
               ),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white30,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Expanded(
+                    child: Scrollbar(
+                      controller: scrollController,
+                      thumbVisibility: true,
+                      thickness: 6,
+                      radius: const Radius.circular(3),
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.only(right: 12),
+                        children: [
+                          _kategoriBasligi("GÖRSEL & KAMERA ALGILAMA"),
+                          _listeOgesi(
+                            icon: Icons.remove_red_eye,
+                            baslik: 'Canlı Algıla (Kamera Modu)',
+                            altBaslik: 'Ortamı ve nesneleri anlık incelet',
+                            onTap: () => _fotografCek(),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.photo_library,
+                            baslik: 'Fotoğraf & Galeri',
+                            altBaslik: 'Kamera veya galeriden görsel yükle',
+                            onTap: () => _galeridenSec(),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.document_scanner,
+                            baslik: 'OCR (Görsel Metin Taraması)',
+                            altBaslik: 'Kitap, tabela veya belgedeki yazıları okut',
+                            onTap: () => _fotografCek(),
+                          ),
+
+                          _kategoriBasligi("MESAJLAŞMA & SOSYAL MEDYA"),
+                          _listeOgesi(
+                            icon: Icons.chat,
+                            baslik: 'WhatsApp & Mesajlaşma',
+                            altBaslik: 'Sohbet geçmişi yedeği veya ses kaydı yükle',
+                            onTap: () => _sosyalMedyaSec('WhatsApp'),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.push_pin,
+                            baslik: 'Pinterest & İlham Panoları',
+                            altBaslik: 'Pano veya görsel linki analiz ettir',
+                            onTap: () => _sosyalMedyaSec('Pinterest'),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.share,
+                            baslik: 'Facebook & Instagram',
+                            altBaslik: 'Gönderi, yorum dizisi veya paylaşım incele',
+                            onTap: () => _sosyalMedyaSec('SocialMedia'),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.video_library,
+                            baslik: 'YouTube & TikTok',
+                            altBaslik: 'Video bağlantısı verip özet al',
+                            onTap: () => _sosyalMedyaSec('Video'),
+                          ),
+
+                          _kategoriBasligi("BULUT & DOSYA DEPOLAMA"),
+                          _listeOgesi(
+                            icon: Icons.cloud_queue,
+                            baslik: 'Bulut Depolama Servisleri',
+                            altBaslik: 'Google Drive, OneDrive, Dropbox, iCloud...',
+                            onTap: () => _bulutServisiSec(),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.insert_drive_file,
+                            baslik: 'Belge & Doküman',
+                            altBaslik: 'PDF, Word, TXT ve sözleşme dosyaları',
+                            onTap: () => _dosyaSec(),
+                          ),
+
+                          _kategoriBasligi("3D, YAZILIM & PROJE DOSYALARI"),
+                          _listeOgesi(
+                            icon: Icons.view_in_ar,
+                            baslik: '3D & CAD Modelleri',
+                            altBaslik: 'SKP, DAE, STL, OBJ dosyaları yükle',
+                            onTap: () => _dosyaSec(),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.code,
+                            baslik: 'Kod & Proje Deposu',
+                            altBaslik: 'Dart, Python, ZIP veya GitHub bağlantısı',
+                            onTap: () => _dosyaSec(),
+                          ),
+
+                          _kategoriBasligi("İŞ, İÇERİK & ÜRETKENLİK"),
+                          _listeOgesi(
+                            icon: Icons.graphic_eq,
+                            baslik: 'Ses & Müzik Dosyası',
+                            altBaslik: 'Ses kaydını metne dök ve özetlet',
+                            onTap: () => _dosyaSec(),
+                          ),
+                          _listeOgesi(
+                            icon: Icons.content_paste,
+                            baslik: 'Panodan Yapıştır',
+                            altBaslik: 'Kopyalanan metni/kodu hızlıca aktar',
+                            onTap: () {
+                              Navigator.pop(context);
+                              setState(() => _metin = "Panodaki metin aktarıldı.");
+                            },
+                          ),
+                          _listeOgesi(
+                            icon: Icons.link,
+                            baslik: 'Web Adresi / Link İncele',
+                            altBaslik: 'Bir web sitesi linkini analiz ettir',
+                            onTap: () {
+                              Navigator.pop(context);
+                              setState(() => _metin = "Web adresi bekleniyor...");
+                            },
+                          ),
+
+                          if (_ozelAraclar.isNotEmpty) ...[
+                            _kategoriBasligi("ÖZEL EKLENEN ARAÇLAR"),
+                            ..._ozelAraclar.map((arac) => _listeOgesi(
+                                  icon: Icons.extension,
+                                  baslik: arac,
+                                  altBaslik: 'Kullanıcı tanımlı özel araç',
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    setState(() => _metin = "$arac aracı çalıştırıldı.");
+                                  },
+                                )),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _kategoriBasligi(String baslik) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 6, left: 8),
+      child: Text(
+        baslik,
+        style: const TextStyle(
+          color: Colors.cyan,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.1,
+        ),
+      ),
+    );
+  }
+
+  Widget _listeOgesi({
+    required IconData icon,
+    required String baslik,
+    required String altBaslik,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.cyan),
+      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      subtitle: Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+    );
+  }
+
+  void _bulutServisiSec() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.black90,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: const BorderSide(color: Colors.cyan, width: 1),
+          ),
+          title: const Text('Bulut Servisi Seçin', style: TextStyle(color: Colors.white, fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.remove_red_eye, color: Colors.cyan),
-                title: const Text('Canlı Algıla (Kamera Modu)', style: TextStyle(color: Colors.white)),
-                subtitle: const Text('Kamerayı açıp etrafı incelemesini sağla', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                leading: const Icon(Icons.add_to_drive, color: Colors.cyan),
+                title: const Text('Google Drive', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  _fotografCek();
+                  _dosyaSec();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_camera, color: Colors.cyan),
-                title: const Text('Fotoğraf Çek', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.cloud_outlined, color: Colors.cyan),
+                title: const Text('Microsoft OneDrive', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  _fotografCek();
+                  _dosyaSec();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.cyan),
-                title: const Text('Galeriden Görsel Seç', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.folder_zip_outlined, color: Colors.cyan),
+                title: const Text('Dropbox', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  _galeridenSec();
+                  _dosyaSec();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.attach_file, color: Colors.cyan),
-                title: const Text('Belge / Dosya Yükle', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.apple, color: Colors.cyan),
+                title: const Text('iCloud Drive', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   _dosyaSec();
@@ -207,6 +391,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         );
       },
     );
+  }
+
+  void _sosyalMedyaSec(String tür) {
+    setState(() {
+      _metin = "$tür verisi aktarımı bekleniyor...";
+    });
   }
 
   Future<void> _fotografCek() async {
@@ -270,75 +460,36 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.58,
+            left: MediaQuery.of(context).size.width * 0.265,
             bottom: MediaQuery.of(context).size.height * 0.08,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: _artiMenusuAc,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
-                      border: Border.all(color: Colors.white30, width: 1.5),
-                    ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 22),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: _sessizModDegistir,
-                  child: ScaleTransition(
-                    scale: _dinliyor ? _pulseController : const AlwaysStoppedAnimation(1.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _sessizMod 
-                            ? Colors.red.withOpacity(0.2) 
-                            : (_dinliyor ? Colors.cyan.withOpacity(0.3) : Colors.transparent),
-                        border: Border.all(
-                          color: _sessizMod 
-                              ? Colors.red 
-                              : (_dinliyor ? Colors.cyan : Colors.transparent),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Icon(
-                        _sessizMod ? Icons.mic_off : Icons.mic,
-                        color: _sessizMod ? Colors.red : (_dinliyor ? Colors.cyan : Colors.white),
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                AnimatedBuilder(
-                  animation: _waveController,
-                  builder: (context, child) {
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(4, (index) {
-                        double height = 8;
-                        if (_dinliyor || _konusuyor) {
-                          height = 8 + (Random().nextDouble() * 16 * _waveController.value);
-                        }
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          width: 3,
-                          height: height,
-                          decoration: BoxDecoration(
-                            color: (_dinliyor || _konusuyor) ? Colors.cyan : Colors.white54,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        );
-                      }),
-                    );
-                  },
-                ),
-              ],
+            width: 45,
+            height: 45,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _artiMenusuAc,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.605,
+            bottom: MediaQuery.of(context).size.height * 0.08,
+            width: 40,
+            height: 45,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _sessizModDegistir,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.665,
+            bottom: MediaQuery.of(context).size.height * 0.08,
+            width: 45,
+            height: 45,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _otomatikDinlemeBaslat,
+              child: Container(color: Colors.transparent),
             ),
           ),
         ],
