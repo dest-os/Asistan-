@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -22,7 +21,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
-  late AudioPlayer _audioPlayer;
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _textController = TextEditingController();
 
@@ -30,11 +28,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
-  bool _isProcessing = false; // Tekrar döngüsünü engelleyen kilit
+  bool _isProcessing = false;
   bool _yaziVar = false;
   double _sesSeviyesi = 0.0;
   bool _isSpeechInitialized = false;
 
+  DateTime? _sonCevapZamani;
   List<String> _ozelAraclar = [];
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
@@ -44,7 +43,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     super.initState();
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
-    _audioPlayer = AudioPlayer();
 
     _spectrumController = AnimationController(
       vsync: this,
@@ -63,32 +61,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     });
 
-    // Ses Çalma Durumu Dinleyicisi
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted) {
-        if (state == PlayerState.playing) {
-          setState(() {
-            _konusuyor = true;
-            _dinliyor = false;
-          });
-        } else if (state == PlayerState.completed || state == PlayerState.stopped) {
-          setState(() {
-            _konusuyor = false;
-            _isProcessing = false;
-          });
-
-          // Ares'in konuşması bittiğinde yankı olmaması için 600ms sonra mikrofonu aç
-          if (!_sessizMod) {
-            Future.delayed(const Duration(milliseconds: 600), () {
-              if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
-                _dinlemeBaslat();
-              }
-            });
-          }
-        }
-      }
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _yukle();
     });
@@ -101,8 +73,80 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _textController.dispose();
     _speech.stop();
     _tts.stop();
-    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _sesMotorunuAyarla(String karakter) async {
+    try {
+      await _tts.setLanguage("tr-TR");
+      await _tts.awaitSpeakCompletion(true);
+
+      if (karakter == 'ERKEK') {
+        // Derin tok erkek sesi tonlaması
+        await _tts.setPitch(0.58);
+        await _tts.setSpeechRate(0.44);
+      } else {
+        // Doğal kadın sesi tonlaması
+        await _tts.setPitch(1.05);
+        await _tts.setSpeechRate(0.50);
+      }
+
+      // Android cihazdaki sesleri tara ve doğru sesi kilitle
+      List<dynamic>? voices = await _tts.getVoices;
+      if (voices != null) {
+        for (var v in voices) {
+          if (v is Map) {
+            String name = (v["name"] ?? "").toString().toLowerCase();
+            String locale = (v["locale"] ?? "").toString().toLowerCase();
+
+            if (locale.contains("tr")) {
+              if (karakter == 'ERKEK' && (name.contains("male") || name.contains("efz") || name.contains("cfz") || name.contains("c"))) {
+                await _tts.setVoice({"name": v["name"].toString(), "locale": v["locale"].toString()});
+                break;
+              } else if (karakter == 'KADIN' && (name.contains("female") || name.contains("dfz") || name.contains("d"))) {
+                await _tts.setVoice({"name": v["name"].toString(), "locale": v["locale"].toString()});
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    _tts.setStartHandler(() {
+      if (mounted) {
+        setState(() {
+          _konusuyor = true;
+          _dinliyor = false;
+        });
+      }
+    });
+
+    _tts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _konusuyor = false;
+          _isProcessing = false;
+        });
+
+        if (!_sessizMod) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
+              _dinlemeBaslat();
+            }
+          });
+        }
+      }
+    });
+
+    _tts.setErrorHandler((_) {
+      if (mounted) {
+        setState(() {
+          _konusuyor = false;
+          _isProcessing = false;
+        });
+      }
+    });
   }
 
   Future<void> _yukle() async {
@@ -110,6 +154,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _karakter = prefs.getString('secilen_karakter') ?? 'ERKEK';
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
     List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
+
+    await _sesMotorunuAyarla(_karakter);
 
     if (mounted) {
       setState(() {
@@ -122,7 +168,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _yuklendi = true;
       });
 
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted && !_sessizMod) {
           _dinlemeBaslat();
         }
@@ -131,53 +177,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // SES MOTORU: GERÇEK TÜRKÇE ERKEK (Ahmet) / KADIN (Emel) SESİ
-  // ============================================================
-  Future<void> _seslendir(String metin) async {
-    if (_sessizMod || metin.trim().isEmpty) return;
-
-    try {
-      await _speech.stop();
-      if (mounted) {
-        setState(() {
-          _dinliyor = false;
-          _konusuyor = true;
-          _isProcessing = true;
-        });
-      }
-
-      final encodedText = Uri.encodeComponent(metin);
-      
-      // Erkek Ares için gerçek Türkçe Erkek (Ahmet), Kadın için Kadın (Emel) motoru
-      final String voiceName = (_karakter == 'ERKEK') ? 'tr-TR-AhmetNeural' : 'tr-TR-EmelNeural';
-      final String streamUrl = "https://api.streamelements.com/kappa/v2/speech?voice=$voiceName&text=$encodedText";
-
-      await _audioPlayer.stop();
-      await _audioPlayer.play(UrlSource(streamUrl));
-    } catch (_) {
-      try {
-        await _tts.setLanguage("tr-TR");
-        if (_karakter == 'ERKEK') {
-          await _tts.setPitch(0.50);
-          await _tts.setSpeechRate(0.44);
-        } else {
-          await _tts.setPitch(1.10);
-          await _tts.setSpeechRate(0.50);
-        }
-        await _tts.speak(metin);
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _konusuyor = false;
-            _isProcessing = false;
-          });
-        }
-      }
-    }
-  }
-
-  // ============================================================
-  // DİNLME YÖNETİMİ VE YANKI ENGELLEYİCİ
+  // KESİN DİNLEME VE TEKRAR ENGELLEYİCİ
   // ============================================================
   Future<void> _dinlemeBaslat() async {
     if (_sessizMod || _konusuyor || _isProcessing) return;
@@ -218,7 +218,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             }
           },
           onResult: (result) {
-            if (result.finalResult && result.recognizedWords.trim().isNotEmpty && !_isProcessing && !_konusuyor) {
+            if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
               _cevapVer(result.recognizedWords);
             }
           },
@@ -240,7 +240,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     } else {
       await _speech.stop();
       await _tts.stop();
-      await _audioPlayer.stop();
       setState(() {
         _sessizMod = true;
         _dinliyor = false;
@@ -251,9 +250,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  // TEKRAR DÖNGÜSÜNÜ TAMAMEN ENGELLEYEN CEVAP VERİCİ
   void _cevapVer(String girdi) async {
+    final now = DateTime.now();
+    // 2 saniye içinde mükerrer gelen veya konuşma anındaki sesleri engelle
+    if (_sonCevapZamani != null && now.difference(_sonCevapZamani!).inMilliseconds < 2000) {
+      return;
+    }
     if (girdi.trim().isEmpty || _konusuyor || _isProcessing) return;
 
+    _sonCevapZamani = now;
     setState(() => _isProcessing = true);
     await _speech.stop();
 
@@ -267,7 +273,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
 
     if (!_sessizMod) {
-      await _seslendir(cevap);
+      await _tts.speak(cevap);
     } else {
       if (mounted) {
         setState(() {
