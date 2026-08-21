@@ -35,7 +35,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
   Future<void> _devamEt() async {
     if (!_formGecerli) return;
 
-    // Mikrofon izni kontrolü
     PermissionStatus status = await Permission.microphone.request();
 
     if (status.isGranted) {
@@ -64,12 +63,11 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    // Hem Telefon Hem Tablette Otomatik 16:9 Oranını Koruyan Kapsayıcı
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: AspectRatio(
-          aspectRatio: 16 / 9, // Tüm cihazlarda tasarımı kitleyen standart oran
+          aspectRatio: 16 / 9, // Hem telefon hem tablette tam oran koruma
           child: LayoutBuilder(
             builder: (context, constraints) {
               final w = constraints.maxWidth;
@@ -100,7 +98,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
                       child: Stack(
                         children: [
                           Container(color: Colors.transparent),
-                          // Kadın Ares seçildiğinde mavi halkanın içinde yanan onay noktası
                           if (_secilenKarakter == 'KADIN')
                             Positioned(
                               right: w * 0.022,
@@ -140,7 +137,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
                       child: Stack(
                         children: [
                           Container(color: Colors.transparent),
-                          // Erkek Ares seçildiğinde mavi halkanın içinde yanan onay noktası
                           if (_secilenKarakter == 'ERKEK')
                             Positioned(
                               left: w * 0.022,
@@ -166,7 +162,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 4. KULLANICI ADI GİRİŞ KUTUSU (TAM OTURTULMUŞ KOYU ALAN)
+                  // 4. KULLANICI ADI GİRİŞ KUTUSU
                   Positioned(
                     left: w * 0.425,
                     top: h * 0.565,
@@ -199,7 +195,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 5. DEVAM ET / BAŞLAT BUTONU (SİBERPUNK JARVIS BUTONU)
+                  // 5. DEVAM ET BUTONU
                   Positioned(
                     bottom: h * 0.120,
                     left: 0,
