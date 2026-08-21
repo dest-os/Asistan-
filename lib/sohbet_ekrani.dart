@@ -21,6 +21,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   String _karakter = 'ERKEK';
   bool _yuklendi = false;
 
+  // Depolama Dizinleri (Varsayılanlar)
+  String _arsivYolu = "Dahili Hafıza / ARES / Arsiv";
+  String _notlarYolu = "Dahili Hafıza / ARES / Notlar";
+  String _egitimYolu = "Dahili Hafıza / ARES / Egitim";
+
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
   final ImagePicker _picker = ImagePicker();
@@ -38,6 +43,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   DateTime? _sonCevapZamani;
   List<String> _ozelAraclar = [];
   List<Map<String, dynamic>> _kayitliApiler = [];
+  List<Map<String, dynamic>> _dinamikOzelModuller = [];
 
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
@@ -157,10 +163,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _hitapSekli = prefs.getString('hitap_sekli') ?? 'Efendim';
     List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
 
+    _arsivYolu = prefs.getString('arsiv_kayit_yolu') ?? "Dahili Hafıza / ARES / Arsiv";
+    _notlarYolu = prefs.getString('notlar_kayit_yolu') ?? "Dahili Hafıza / ARES / Notlar";
+    _egitimYolu = prefs.getString('egitim_kayit_yolu') ?? "Dahili Hafıza / ARES / Egitim";
+
     String? apilerJson = prefs.getString('kayitli_api_havuzu');
     if (apilerJson != null) {
       try {
         _kayitliApiler = List<Map<String, dynamic>>.from(json.decode(apilerJson));
+      } catch (_) {}
+    }
+
+    String? modullerJson = prefs.getString('dinamik_ozel_moduller');
+    if (modullerJson != null) {
+      try {
+        _dinamikOzelModuller = List<Map<String, dynamic>>.from(json.decode(modullerJson));
       } catch (_) {}
     }
 
@@ -314,7 +331,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ (SOL ÇİZGİLERDEN AÇILIR)
+  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ
   // ============================================================
   void _ayarlarPaneliniAc() {
     showGeneralDialog(
@@ -324,211 +341,328 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       barrierColor: Colors.black.withOpacity(0.65),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.42,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFF060911).withOpacity(0.97),
-                border: const Border(
-                  right: BorderSide(color: Colors.cyanAccent, width: 2.0),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.cyanAccent.withOpacity(0.25),
-                    blurRadius: 25,
-                    spreadRadius: 2,
-                  )
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ÜST BAŞLIK & KAPATMA
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setPanelState) {
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.44,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF060911).withOpacity(0.97),
+                    border: const Border(
+                      right: BorderSide(color: Colors.cyanAccent, width: 2.0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withOpacity(0.25),
+                        blurRadius: 25,
+                        spreadRadius: 2,
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ÜST BAŞLIK & KAPATMA
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.cyanAccent.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.cyanAccent, width: 1.2),
-                            ),
-                            child: const Icon(Icons.settings_suggest_rounded, color: Colors.cyanAccent, size: 20),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.cyanAccent.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.cyanAccent, width: 1.2),
+                                ),
+                                child: const Icon(Icons.settings_suggest_rounded, color: Colors.cyanAccent, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "ARES // SİSTEM KONTROL",
+                                style: TextStyle(
+                                  color: Colors.cyanAccent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            "ARES // SİSTEM KONTROL",
-                            style: TextStyle(
-                              color: Colors.cyanAccent,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
+                            onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
-                        onPressed: () => Navigator.pop(context),
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.white12, thickness: 1),
+                      const SizedBox(height: 8),
+
+                      // KAYDIRILABİLİR 3D AYAR BUTONLARI
+                      Expanded(
+                        child: ListView(
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            // 1. KULLANICI PROFİLİ VE HİTAP (3D KART)
+                            _siberpunk3dKart(
+                              baslik: "KULLANICI KİMLİĞİ & HİTAP",
+                              altBaslik: "Ares'in size nasıl sesleneceğini belirleyin",
+                              icon: Icons.person_pin_rounded,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      "$_kullaniciAdi ($_hitapSekli)",
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: _mini3dButon(
+                                      metin: "DÜZENLE",
+                                      onTap: () => _profilDuzenleModal(setPanelState),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 2. KARAKTER VE SES GEÇİŞİ (İKİLİ 3D SEÇİCİ)
+                            _siberpunk3dKart(
+                              baslik: "ARES KARAKTER & SES MODELİ",
+                              altBaslik: "Aktif arayüz ve ses motorunu anında değiştirin",
+                              icon: Icons.record_voice_over_rounded,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _karakterSecim3dButon(
+                                      baslik: "ERKEK ARES",
+                                      aktif: _karakter == 'ERKEK',
+                                      onTap: () {
+                                        _karakterDegistir('ERKEK');
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _karakterSecim3dButon(
+                                      baslik: "KADIN ARES",
+                                      aktif: _karakter == 'KADIN',
+                                      onTap: () {
+                                        _karakterDegistir('KADIN');
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 3. YAPAY ZEKA HAVUZU // API YÖNETİMİ
+                            _siberpunk3dButon(
+                              baslik: "YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
+                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Motoru Tanımlı",
+                              icon: Icons.hub_rounded,
+                              vurgulu: true,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _apiHavuzuPaneliniAc();
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 4. ARŞİV DOSYASI (ZAMAN DAMGALI & KONU BAŞLIKLI KASA)
+                            _siberpunkDepolamaKart(
+                              baslik: "📁 ARŞİV MERKEZİ",
+                              altBaslik: "Geçmiş sohbet, proje ve çıktıların otomatik kasası",
+                              icon: Icons.archive_rounded,
+                              mevcutYol: _arsivYolu,
+                              onGozat: () async {
+                                String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                                if (selectedDirectory != null) {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setString('arsiv_kayit_yolu', selectedDirectory);
+                                  setPanelState(() => _arsivYolu = selectedDirectory);
+                                  setState(() => _arsivYolu = selectedDirectory);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 5. NOTLAR BÖLÜMÜ (DİJİTAL NOT KAĞITLARI)
+                            _siberpunkDepolamaKart(
+                              baslik: "📝 NOTLAR MERKEZİ",
+                              altBaslik: "Kullanıcı fikirleri ve dijital not kağıtları havuzu",
+                              icon: Icons.edit_note_rounded,
+                              mevcutYol: _notlarYolu,
+                              onGozat: () async {
+                                String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                                if (selectedDirectory != null) {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setString('notlar_kayit_yolu', selectedDirectory);
+                                  setPanelState(() => _notlarYolu = selectedDirectory);
+                                  setState(() => _notlarYolu = selectedDirectory);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 6. EĞİTİM MERKEZİ (ARES ÖZEL EĞİTİM & HOCA HAVUZU)
+                            _siberpunkDepolamaKart(
+                              baslik: "🎓 EĞİTİM MERKEZİ",
+                              altBaslik: "Yabancı dil, uzmanlaşma ve özel hoca materyalleri",
+                              icon: Icons.school_rounded,
+                              mevcutYol: _egitimYolu,
+                              onGozat: () async {
+                                String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+                                if (selectedDirectory != null) {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setString('egitim_kayit_yolu', selectedDirectory);
+                                  setPanelState(() => _egitimYolu = selectedDirectory);
+                                  setState(() => _egitimYolu = selectedDirectory);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 7. KLONLANMIŞ DOĞAL SES ENTEGRASYONU
+                            _siberpunk3dButon(
+                              baslik: "KLONLANMIŞ SES ENTEGRASYONU",
+                              altBaslik: "ElevenLabs / Özel Doğal Ses API'si Bağla",
+                              icon: Icons.graphic_eq_rounded,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _klonSesPaneliniAc();
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 8. YAPAY ZEKA İLE SİBERPUNK YÜZ OLUŞTURMA
+                            _siberpunk3dButon(
+                              baslik: "SİBERPUNK YÜZ & AVATAR ÜRETİCİ",
+                              altBaslik: "Kendi fotoğrafından robotik ARES avatarı üret",
+                              icon: Icons.face_retouching_natural_rounded,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _yuzOlusturucuModal();
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 9. DİNAMİK EKLENEN ÖZEL KULLANICI MODÜLLERİ
+                            if (_dinamikOzelModuller.isNotEmpty) ...[
+                              ..._dinamikOzelModuller.asMap().entries.map((entry) {
+                                int idx = entry.key;
+                                var mod = entry.value;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0A101D),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.cyanAccent.withOpacity(0.12),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.extension_rounded, color: Colors.cyanAccent, size: 20),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(mod["baslik"] ?? "Özel Modül", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              const SizedBox(height: 2),
+                                              Text(mod["aciklama"] ?? "", style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                          onPressed: () async {
+                                            _dinamikOzelModuller.removeAt(idx);
+                                            final prefs = await SharedPreferences.getInstance();
+                                            await prefs.setString('dinamik_ozel_moduller', json.encode(_dinamikOzelModuller));
+                                            setPanelState(() {});
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+
+                            // ➕ 10. YENİ BUTON VE KUTU EKLE BUTONU (DİNAMİK EKLEYİCİ)
+                            GestureDetector(
+                              onTap: () => _yeniDinamikModulEkleModal(setPanelState),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.cyanAccent.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.cyanAccent, width: 1.6),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 10),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_circle_outline_rounded, color: Colors.cyanAccent, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "YENİ BUTON & KUTU EKLE",
+                                      style: TextStyle(
+                                        color: Colors.cyanAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // 11. SİSTEM & BELLEK SIFIRLAMA
+                            _siberpunk3dButon(
+                              baslik: "SİSTEM VE BELLEĞİ SIFIRLA",
+                              altBaslik: "Önbelleği temizle veya fabrika ayarlarına dön",
+                              icon: Icons.delete_sweep_rounded,
+                              tehlikeli: true,
+                              onTap: () => Navigator.pop(context),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  const Divider(color: Colors.white12, thickness: 1),
-                  const SizedBox(height: 10),
-
-                  // KAYDIRILABİLİR 3D AYAR BUTONLARI LİSTESİ
-                  Expanded(
-                    child: ListView(
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        // 1. KULLANICI PROFİLİ VE HİTAP (3D KART)
-                        _siberpunk3dKart(
-                          baslik: "KULLANICI KİMLİĞİ & HİTAP",
-                          altBaslik: "Ares'in size nasıl sesleneceğini belirleyin",
-                          icon: Icons.person_pin_rounded,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  "$_kullaniciAdi ($_hitapSekli)",
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: _mini3dButon(
-                                  metin: "DÜZENLE",
-                                  onTap: _profilDuzenleModal,
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 2. KARAKTER VE SES GEÇİŞİ (İKİLİ 3D SEÇİCİ)
-                        _siberpunk3dKart(
-                          baslik: "ARES KARAKTER & SES MODELİ",
-                          altBaslik: "Aktif arayüz ve ses motorunu anında değiştirin",
-                          icon: Icons.record_voice_over_rounded,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _karakterSecim3dButon(
-                                  baslik: "ERKEK ARES",
-                                  aktif: _karakter == 'ERKEK',
-                                  onTap: () {
-                                    _karakterDegistir('ERKEK');
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _karakterSecim3dButon(
-                                  baslik: "KADIN ARES",
-                                  aktif: _karakter == 'KADIN',
-                                  onTap: () {
-                                    _karakterDegistir('KADIN');
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 3. YAPAY ZEKA HAVUZU // API YÖNETİMİ (4 KUTULU KAYAR ALAN)
-                        _siberpunk3dButon(
-                          baslik: "YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
-                          altBaslik: "${_kayitliApiler.length} Yapay Zeka Motoru Tanımlı",
-                          icon: Icons.hub_rounded,
-                          vurgulu: true,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _apiHavuzuPaneliniAc();
-                          },
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 4. KLONLANMIŞ DOĞAL SES ENTEGRASYONU
-                        _siberpunk3dButon(
-                          baslik: "KLONLANMIŞ SES ENTEGRASYONU",
-                          altBaslik: "ElevenLabs / Özel Doğal Ses API'si Bağla",
-                          icon: Icons.graphic_eq_rounded,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _klonSesPaneliniAc();
-                          },
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 5. YAPAY ZEKA İLE SİBERPUNK YÜZ OLUŞTURMA
-                        _siberpunk3dButon(
-                          baslik: "SİBERPUNK YÜZ & AVATAR ÜRETİCİ",
-                          altBaslik: "Kendi fotoğrafından robotik ARES avatarı üret",
-                          icon: Icons.face_retouching_natural_rounded,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _yuzOlusturucuModal();
-                          },
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 6. YANIT MODU VE DAVRANIŞ
-                        _siberpunk3dButon(
-                          baslik: "YANIT MODU VE TAKTİKSEL DAVRANIŞ",
-                          altBaslik: "Kısa ve Net / Detaylı Analiz / Komutan Modu",
-                          icon: Icons.psychology_alt_rounded,
-                          onTap: () => Navigator.pop(context),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 7. SİSTEM & BELLEK SIFIRLAMA
-                        _siberpunk3dButon(
-                          baslik: "SİSTEM VE BELLEĞİ SIFIRLA",
-                          altBaslik: "Önbelleği temizle veya fabrika ayarlarına dön",
-                          icon: Icons.delete_sweep_rounded,
-                          tehlikeli: true,
-                          onTap: () => Navigator.pop(context),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // ➕ GELECEKTEKİ EKLER İÇİN BOŞ REZERV 3D BUTON SLOTLARI
-                        _siberpunk3dButon(
-                          baslik: "+ ÖZEL MODÜL SLOTU 1",
-                          altBaslik: "Yeni yetenek ve entegrasyonlar için ayrıldı",
-                          icon: Icons.extension_outlined,
-                          pasif: true,
-                          onTap: () {},
-                        ),
-                        const SizedBox(height: 14),
-                        _siberpunk3dButon(
-                          baslik: "+ ÖZEL MODÜL SLOTU 2",
-                          altBaslik: "Yeni yetenek ve entegrasyonlar için ayrıldı",
-                          icon: Icons.extension_outlined,
-                          pasif: true,
-                          onTap: () {},
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
       transitionBuilder: (context, anim1, anim2, child) {
@@ -538,6 +672,74 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             end: Offset.zero,
           ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
           child: child,
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // ➕ YENİ DİNAMİK BUTON VE KUTU EKLEME PENCERESİ
+  // ============================================================
+  void _yeniDinamikModulEkleModal(StateSetter setPanelState) {
+    final baslikCtrl = TextEditingController();
+    final aciklamaCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF080D18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+          ),
+          title: const Text("YENİ ÖZEL BUTON & KUTU EKLE", style: TextStyle(color: Colors.cyanAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _siberpunkGirisKutusu(
+                baslik: "BUTON / MODÜL BAŞLIĞI",
+                hint: "Örn: Proje Yönetimi, Finans, Sağlık...",
+                controller: baslikCtrl,
+                icon: Icons.label_important_rounded,
+              ),
+              const SizedBox(height: 12),
+              _siberpunkGirisKutusu(
+                baslik: "GÖREV & AÇIKLAMA",
+                hint: "Ares'in bu butonla yapacağı görevi tanımlayın",
+                controller: aciklamaCtrl,
+                icon: Icons.description_rounded,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("İPTAL", style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF042940)),
+              onPressed: () async {
+                if (baslikCtrl.text.trim().isEmpty) return;
+
+                final yeniModul = {
+                  "baslik": baslikCtrl.text.trim(),
+                  "aciklama": aciklamaCtrl.text.trim(),
+                  "tarih": DateTime.now().toIso8601String(),
+                };
+
+                _dinamikOzelModuller.add(yeniModul);
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('dinamik_ozel_moduller', json.encode(_dinamikOzelModuller));
+
+                setPanelState(() {});
+                setState(() {});
+                if (!mounted) return;
+                Navigator.pop(context);
+              },
+              child: const Text("SİSTEME EKLE", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+            ),
+          ],
         );
       },
     );
@@ -606,14 +808,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         // FORM GİRİŞ ALANI (4 KUTU)
                         _siberpunkGirisKutusu(
                           baslik: "1. FİRMA / YAPAY ZEKA ADI",
-                          hint: "Örn: Google Gemini, OpenAI GPT-4, DeepSeek, Midjourney",
+                          hint: "Örn: Google, Nvidia, OpenAI, Anthropic...",
                           controller: firmaCtrl,
                           icon: Icons.business_rounded,
                         ),
                         const SizedBox(height: 12),
                         _siberpunkGirisKutusu(
                           baslik: "2. API ADRESİ (ENDPOINT)",
-                          hint: "Örn: https://generativelanguage.googleapis.com/v1beta/...",
+                          hint: "Örn: https://generativelanguage.googleapis.com",
                           controller: adresCtrl,
                           icon: Icons.link_rounded,
                         ),
@@ -766,6 +968,63 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   // ============================================================
   // YARDIMCI 3D WIDGET'LAR
   // ============================================================
+  Widget _siberpunkDepolamaKart({
+    required String baslik,
+    required String altBaslik,
+    required IconData icon,
+    required String mevcutYol,
+    required VoidCallback onGozat,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A101D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1B3B5F), width: 1.5),
+        boxShadow: const [
+          BoxShadow(color: Color(0xFF02050A), offset: Offset(0, 4), blurRadius: 8),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.cyanAccent, size: 18),
+              const SizedBox(width: 8),
+              Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.0)),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Text(
+                    mevcutYol,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.cyanAccent, fontSize: 11),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _mini3dButon(metin: "KLASÖR SEÇ", onTap: onGozat),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _siberpunk3dKart({required String baslik, required String altBaslik, required IconData icon, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -803,26 +1062,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     required VoidCallback onTap,
     bool vurgulu = false,
     bool tehlikeli = false,
-    bool pasif = false,
   }) {
-    Color anaRenk = tehlikeli
-        ? Colors.redAccent
-        : (vurgulu ? Colors.cyanAccent : (pasif ? Colors.white38 : const Color(0xFF2684FF)));
+    Color anaRenk = tehlikeli ? Colors.redAccent : (vurgulu ? Colors.cyanAccent : const Color(0xFF2684FF));
 
     return GestureDetector(
-      onTap: pasif ? null : onTap,
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: pasif ? Colors.white.withOpacity(0.02) : const Color(0xFF0A101D),
+          color: const Color(0xFF0A101D),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: anaRenk.withOpacity(pasif ? 0.2 : 0.6), width: 1.5),
-          boxShadow: pasif
-              ? []
-              : [
-                  BoxShadow(color: Colors.black.withOpacity(0.6), offset: const Offset(0, 4), blurRadius: 6),
-                  if (vurgulu) BoxShadow(color: Colors.cyanAccent.withOpacity(0.15), blurRadius: 10),
-                ],
+          border: Border.all(color: anaRenk.withOpacity(0.6), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.6), offset: const Offset(0, 4), blurRadius: 6),
+            if (vurgulu) BoxShadow(color: Colors.cyanAccent.withOpacity(0.15), blurRadius: 10),
+          ],
         ),
         child: Row(
           children: [
@@ -839,17 +1093,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    baslik,
-                    style: TextStyle(
-                      color: pasif ? Colors.white38 : Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
+                  Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.8)),
                   const SizedBox(height: 2),
-                  Text(altBaslik, style: TextStyle(color: pasif ? Colors.white24 : Colors.white54, fontSize: 11)),
+                  Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
                 ],
               ),
             ),
@@ -892,7 +1138,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: const Color(0xFF052136),
           borderRadius: BorderRadius.circular(10),
@@ -901,7 +1147,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         alignment: Alignment.center,
         child: Text(
           metin,
-          style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1.0),
+          style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.8),
         ),
       ),
     );
@@ -943,7 +1189,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  void _profilDuzenleModal() {
+  void _profilDuzenleModal(StateSetter setPanelState) {
     final nameCtrl = TextEditingController(text: _kullaniciAdi);
     final hitapCtrl = TextEditingController(text: _hitapSekli);
 
@@ -976,6 +1222,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('kullanici_adi', nameCtrl.text.trim());
                 await prefs.setString('hitap_sekli', hitapCtrl.text.trim());
+                setPanelState(() {
+                  _kullaniciAdi = nameCtrl.text.trim();
+                  _hitapSekli = hitapCtrl.text.trim();
+                });
                 setState(() {
                   _kullaniciAdi = nameCtrl.text.trim();
                   _hitapSekli = hitapCtrl.text.trim();
@@ -1248,7 +1498,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // EKRAN YERLEŞİMİ (TAM SABİTLENMİŞ BUTONLAR VE MENÜ TETİKLEYİCİSİ)
+  // EKRAN YERLEŞİMİ
   // ============================================================
   @override
   Widget build(BuildContext context) {
