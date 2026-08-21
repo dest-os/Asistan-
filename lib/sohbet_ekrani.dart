@@ -25,13 +25,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   final TextEditingController _textController = TextEditingController();
 
   String _metin = "Merhaba İbrahim, senin için ne yapabilirim?";
-  bool _sessizMod = false;
+  bool _sessizMod = false; // Kafe/toplu alan modu
   bool _dinliyor = false;
   bool _konusuyor = false;
   bool _yaziVar = false;
+  double _sesSeviyesi = 0.0;
 
   List<String> _ozelAraclar = [];
-  late AnimationController _waveController;
+  late AnimationController _spectrumController;
+  late AnimationController _pulseController;
 
   @override
   void initState() {
@@ -39,9 +41,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
 
-    _waveController = AnimationController(
+    // Spektrum çubukları animasyonu
+    _spectrumController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 400),
+    )..repeat(reverse: true);
+
+    // Mikrofon etrafındaki nabız halkası animasyonu
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
     )..repeat();
 
     _textController.addListener(() {
@@ -56,7 +65,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   @override
   void dispose() {
-    _waveController.dispose();
+    _spectrumController.dispose();
+    _pulseController.dispose();
     _textController.dispose();
     _speech.stop();
     _tts.stop();
@@ -64,24 +74,24 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // GERÇEK ERKEK VE KADIN SESİ AYARLAMA MOTORU
+  // GERÇEK TÜRKÇE ERKEK SESİ VE KADIN SESİ AYARLARI
   // ============================================================
   Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
 
     if (karakter == 'ERKEK') {
-      await _tts.setPitch(0.70); // Doğal derin erkek tınısı
-      await _tts.setSpeechRate(0.48);
+      await _tts.setPitch(0.50); // Derin ve tok erkek sesi
+      await _tts.setSpeechRate(0.44); // Net ve karizmatik konuşma hızı
     } else {
-      await _tts.setPitch(1.15); // Doğal kadın tınısı
-      await _tts.setSpeechRate(0.52);
+      await _tts.setPitch(1.10); // Doğal kadın tınısı
+      await _tts.setSpeechRate(0.50);
     }
 
     try {
       List<dynamic> voices = await _tts.getVoices;
       bool sesBulundu = false;
 
-      // Gerçek Türkçe Erkek Ses Motoru Taraması
+      // Cihazdaki Türkçe erkek/kadın ses motorlarını tespit et
       for (var voice in voices) {
         if (voice is Map) {
           String name = voice["name"].toString().toLowerCase();
@@ -89,19 +99,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
           if (locale.contains("tr")) {
             if (karakter == 'ERKEK') {
-              // Google TTS Erkek sesleri: tr-tr-x-efz, tr-tr-x-c, tr-tr-x-cfz veya male içerenler
+              // Android Google TTS Erkek ses tanımlayıcıları
               if (name.contains("male") ||
                   name.contains("erkek") ||
                   name.contains("x-efz") ||
                   name.contains("x-cfz") ||
                   name.contains("x-c") ||
+                  name.contains("tr-tr-x-efz-local") ||
                   name.contains("male_1")) {
                 await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
                 sesBulundu = true;
                 break;
               }
             } else {
-              // Google TTS Kadın sesleri
+              // Android Google TTS Kadın ses tanımlayıcıları
               if (name.contains("female") ||
                   name.contains("kadin") ||
                   name.contains("x-dfz") ||
@@ -116,10 +127,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         }
       }
 
-      // Eğer cihazda spesifik erkek paketi yoksa Android TTS motoruna parametre gönder
+      // Eğer cihaz listesinde özel isim yakalanamadıysa zorunlu erkek profili
       if (!sesBulundu && karakter == 'ERKEK') {
         try {
-          await _tts.setVoice({"name": "tr-tr-x-efz-local", "locale": "tr-TR"});
+          await _tts.setVoice({"name": "tr-tr-x-efz#male_1", "locale": "tr-TR"});
         } catch (_) {}
       }
     } catch (_) {}
@@ -162,6 +173,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  // ============================================================
+  // DİNLEME VE SESSİZ MOD KONTROLÜ
+  // ============================================================
   void _otomatikDinlemeBaslat() async {
     if (_sessizMod || _konusuyor) return;
 
@@ -182,6 +196,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       if (available && !_sessizMod && !_konusuyor) {
         if (mounted) setState(() => _dinliyor = true);
         _speech.listen(
+          onSoundLevelChange: (level) {
+            if (mounted) {
+              setState(() {
+                _sesSeviyesi = (level / 10).clamp(0.1, 1.0);
+              });
+            }
+          },
           onResult: (result) {
             if (result.finalResult) {
               _cevapVer(result.recognizedWords);
@@ -194,12 +215,33 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  void _mikrofonaDokunuldu() async {
+    // Mikrofona basıldığında Konuşma Modu <-> Sessiz Mod geçişi yapılır
+    if (_sessizMod) {
+      // Sessiz moddan çık, konuşma moduna geç
+      setState(() {
+        _sessizMod = false;
+        _metin = "Seni dinliyorum...";
+      });
+      _otomatikDinlemeBaslat();
+    } else {
+      // Sessiz moda geç (Kafe modu: sesler ve mikrofon kapanır)
+      await _speech.stop();
+      await _tts.stop();
+      setState(() {
+        _sessizMod = true;
+        _dinliyor = false;
+        _konusuyor = false;
+        _metin = "Sessiz Mod Aktif (Sadece Yazı İle İletişim)";
+      });
+    }
+  }
+
   void _cevapVer(String girdi) async {
     if (girdi.trim().isEmpty || _konusuyor) return;
 
     await _speech.stop();
 
-    // Ares'in dinamik yanıtı
     String cevap = "Merhaba $_kullaniciAdi, sizi dinledim. Ares sistemi devrede.";
 
     if (mounted) {
@@ -224,27 +266,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _cevapVer(text);
   }
 
-  void _sessizModDegistir() async {
-    setState(() {
-      _sessizMod = !_sessizMod;
-    });
-
-    if (_sessizMod) {
-      await _speech.stop();
-      await _tts.stop();
-      setState(() {
-        _dinliyor = false;
-        _konusuyor = false;
-        _metin = "Sessiz Mod Aktif (Sadece Yazı)";
-      });
-    } else {
-      setState(() => _metin = "Seni dinliyorum...");
-      _otomatikDinlemeBaslat();
-    }
-  }
-
   // ============================================================
-  // SİBERPUNK + MENÜSÜ (GÖNDER BUTONLU & SEÇİM TETİKLEMELİ)
+  // SİBERPUNK + MENÜSÜ
   // ============================================================
   void _artiMenusuAc() {
     showModalBottomSheet(
@@ -492,7 +515,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // EKRAN YERLEŞİMİ (TASARIMA VE FİZİKSEL EKRANA BİREBİR UYUM)
+  // EKRAN YERLEŞİMİ (MİKROFON VE SPEKTRUM BİREBİR HİZALAMA)
   // ============================================================
   @override
   Widget build(BuildContext context) {
@@ -526,13 +549,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             top: screenHeight * 0.24,
             bottom: screenHeight * 0.22,
             child: Container(
-              // Arka plan görselindeki sabit yazıyı tamamen kapatmak için opak zemin
               decoration: BoxDecoration(
                 color: const Color(0xFF030508),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: SingleChildScrollView(
                 child: Text(
                   _metin,
@@ -587,109 +609,135 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 style: const TextStyle(color: Colors.white, fontSize: 15),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: '', // Arka plan görselinde yazıyor
+                  hintText: '',
                 ),
                 onSubmitted: _gonderilecekMesaj,
               ),
             ),
           ),
 
-          // 6. ORTA PANEL: MİKROFON VE TAM ÜZERİNE OTURAN CYAN HALKA ANİMASYONU
+          // 6. ORTA PANEL: MİKROFON BUTONU (TAM MERKEZLENMİŞ HALKA & SESSİZ MOD KONTROLÜ)
           Positioned(
-            left: screenWidth * 0.605,
-            bottom: screenHeight * 0.078,
-            width: screenWidth * 0.050,
-            height: screenHeight * 0.080,
+            left: screenWidth * 0.610,
+            bottom: screenHeight * 0.082,
+            width: 44,
+            height: 44,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () {
-                if (_dinliyor) {
-                  _speech.stop();
-                  setState(() => _dinliyor = false);
-                } else {
-                  _otomatikDinlemeBaslat();
-                }
-              },
+              onTap: _mikrofonaDokunuldu,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Container(color: Colors.transparent),
-                  // Mikrofon devredeyken mikrofon ikonunun etrafını saran dalga halkası
-                  if (_dinliyor)
+                  
+                  // Dinleme devredeyken mikrofonun etrafında tam merkezlenen cyan dalga halkası
+                  if (_dinliyor && !_sessizMod)
                     AnimatedBuilder(
-                      animation: _waveController,
+                      animation: _pulseController,
                       builder: (context, child) {
                         return Container(
-                          width: 38 + (_waveController.value * 14),
-                          height: 38 + (_waveController.value * 14),
+                          width: 36 + (_pulseController.value * 14),
+                          height: 36 + (_pulseController.value * 14),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
-                              width: 2.5,
+                              color: Colors.cyanAccent.withOpacity((1 - _pulseController.value).clamp(0.0, 1.0)),
+                              width: 2.2,
                             ),
                           ),
                         );
                       },
+                    ),
+
+                  // Sessiz mod aktifken mikrofon üzerine gelen kırmızı sessiz rozeti
+                  if (_sessizMod)
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.mic_off,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                     ),
                 ],
               ),
             ),
           ),
 
-          // 7. ORTA PANEL: MAVİ BUTON VEYA YUKARI BAKAN OK (GÖNDER BUTONU)
+          // 7. ORTA PANEL: CANLI SES SPEKTRUMU / GÖNDER BUTONU
           Positioned(
-            left: screenWidth * 0.662,
-            bottom: screenHeight * 0.078,
-            width: screenWidth * 0.052,
-            height: screenHeight * 0.080,
+            left: screenWidth * 0.665,
+            bottom: screenHeight * 0.082,
+            width: 44,
+            height: 44,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () {
                 if (_yaziVar) {
-                  // Yazı varsa Gönder butonu çalışır
                   _gonderilecekMesaj(_textController.text);
                 } else {
-                  // Yazı yoksa Sesli / Sessiz mod değişir
-                  _sessizModDegistir();
+                  _mikrofonaDokunuldu();
                 }
               },
               child: Container(
-                color: Colors.transparent,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.transparent,
+                ),
                 alignment: Alignment.center,
                 child: _yaziVar
-                    // Yazı yazıldığında beliren şık yukarı bakan Gönder Oku
+                    // Yazı varken yukarı bakan gönder oku
                     ? Container(
-                        padding: const EdgeInsets.all(8),
+                        width: 38,
+                        height: 38,
                         decoration: const BoxDecoration(
-                          color: Colors.blueAccent,
+                          color: Color(0xFF1E60FF),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.arrow_upward_rounded,
                           color: Colors.white,
-                          size: 20,
+                          size: 22,
                         ),
                       )
-                    : (_konusuyor)
-                        // Asistan konuşurken dalga animasyonu
-                        ? AnimatedBuilder(
-                            animation: _waveController,
-                            builder: (context, child) {
+                    // Yazı yokken canlı ses spektrum çubukları
+                    : AnimatedBuilder(
+                        animation: _spectrumController,
+                        builder: (context, child) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(4, (index) {
+                              double barHeight;
+
+                              if (_sessizMod) {
+                                barHeight = 4.0; // Sessiz modda düz ve durgun çizgi
+                              } else if (_dinliyor) {
+                                // Kullanıcı konuşurken mikrofondan gelen sese göre zıplayan barlar
+                                barHeight = 6.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.2)).abs() * 16.0 * (_sesSeviyesi > 0.2 ? _sesSeviyesi : 0.6));
+                              } else if (_konusuyor) {
+                                // Ares konuşurken ritmik spektrum
+                                barHeight = 8.0 + (sin((_spectrumController.value * 2 * pi) + (index * 0.9)).abs() * 18.0);
+                              } else {
+                                barHeight = 8.0; // Bekleme modu
+                              }
+
                               return Container(
-                                width: 38 + (_waveController.value * 10),
-                                height: 38 + (_waveController.value * 10),
+                                margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                width: 3.2,
+                                height: barHeight.clamp(4.0, 26.0),
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.cyanAccent.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
-                                    width: 2,
-                                  ),
+                                  color: _sessizMod ? Colors.white38 : Colors.white,
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
                               );
-                            },
-                          )
-                        : null,
+                            }),
+                          );
+                        },
+                      ),
               ),
             ),
           ),
