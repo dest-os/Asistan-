@@ -27,9 +27,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   final TextEditingController _textController = TextEditingController();
 
   String _metin = "Seni dinliyorum...";
-  bool _sessizMod = false; // Kafe / Toplu alan sessiz modu
+  bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
+  bool _isProcessing = false; // Tekrar döngüsünü engelleyen kilit
   bool _yaziVar = false;
   double _sesSeviyesi = 0.0;
   bool _isSpeechInitialized = false;
@@ -62,15 +63,24 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     });
 
+    // Ses Çalma Durumu Dinleyicisi
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
         if (state == PlayerState.playing) {
-          setState(() => _konusuyor = true);
+          setState(() {
+            _konusuyor = true;
+            _dinliyor = false;
+          });
         } else if (state == PlayerState.completed || state == PlayerState.stopped) {
-          setState(() => _konusuyor = false);
+          setState(() {
+            _konusuyor = false;
+            _isProcessing = false;
+          });
+
+          // Ares'in konuşması bittiğinde yankı olmaması için 600ms sonra mikrofonu aç
           if (!_sessizMod) {
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted && !_sessizMod && !_konusuyor) {
+            Future.delayed(const Duration(milliseconds: 600), () {
+              if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
                 _dinlemeBaslat();
               }
             });
@@ -112,7 +122,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _yuklendi = true;
       });
 
-      Future.delayed(const Duration(milliseconds: 350), () {
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && !_sessizMod) {
           _dinlemeBaslat();
         }
@@ -121,7 +131,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // SES MOTORU: GERÇEK VE DOĞAL TÜRKÇE ERKEK/KADIN SES SENTEZİ
+  // SES MOTORU: GERÇEK TÜRKÇE ERKEK (Ahmet) / KADIN (Emel) SESİ
   // ============================================================
   Future<void> _seslendir(String metin) async {
     if (_sessizMod || metin.trim().isEmpty) return;
@@ -132,11 +142,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         setState(() {
           _dinliyor = false;
           _konusuyor = true;
+          _isProcessing = true;
         });
       }
 
       final encodedText = Uri.encodeComponent(metin);
-      final String streamUrl = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=tr&client=tw-ob";
+      
+      // Erkek Ares için gerçek Türkçe Erkek (Ahmet), Kadın için Kadın (Emel) motoru
+      final String voiceName = (_karakter == 'ERKEK') ? 'tr-TR-AhmetNeural' : 'tr-TR-EmelNeural';
+      final String streamUrl = "https://api.streamelements.com/kappa/v2/speech?voice=$voiceName&text=$encodedText";
 
       await _audioPlayer.stop();
       await _audioPlayer.play(UrlSource(streamUrl));
@@ -144,7 +158,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       try {
         await _tts.setLanguage("tr-TR");
         if (_karakter == 'ERKEK') {
-          await _tts.setPitch(0.55);
+          await _tts.setPitch(0.50);
           await _tts.setSpeechRate(0.44);
         } else {
           await _tts.setPitch(1.10);
@@ -152,16 +166,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         }
         await _tts.speak(metin);
       } catch (e) {
-        if (mounted) setState(() => _konusuyor = false);
+        if (mounted) {
+          setState(() {
+            _konusuyor = false;
+            _isProcessing = false;
+          });
+        }
       }
     }
   }
 
   // ============================================================
-  // MİKROFON VE DİNLEME YÖNETİMİ
+  // DİNLME YÖNETİMİ VE YANKI ENGELLEYİCİ
   // ============================================================
   Future<void> _dinlemeBaslat() async {
-    if (_sessizMod || _konusuyor) return;
+    if (_sessizMod || _konusuyor || _isProcessing) return;
 
     try {
       if (!_isSpeechInitialized) {
@@ -171,9 +190,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               setState(() {
                 _dinliyor = (status == 'listening');
               });
-              if ((status == 'notListening' || status == 'done') && !_sessizMod && !_konusuyor) {
-                Future.delayed(const Duration(milliseconds: 300), () {
-                  if (mounted && !_sessizMod && !_konusuyor && !_dinliyor) {
+              if ((status == 'notListening' || status == 'done') && !_sessizMod && !_konusuyor && !_isProcessing) {
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  if (mounted && !_sessizMod && !_konusuyor && !_dinliyor && !_isProcessing) {
                     _dinlemeBaslat();
                   }
                 });
@@ -181,21 +200,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             }
           },
           onError: (_) {
-            if (mounted) {
-              setState(() => _dinliyor = false);
-              if (!_sessizMod && !_konusuyor) {
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (mounted && !_sessizMod && !_konusuyor) {
-                    _dinlemeBaslat();
-                  }
-                });
-              }
-            }
+            if (mounted) setState(() => _dinliyor = false);
           },
         );
       }
 
-      if (_isSpeechInitialized && !_sessizMod && !_konusuyor && !_speech.isListening) {
+      if (_isSpeechInitialized && !_sessizMod && !_konusuyor && !_isProcessing && !_speech.isListening) {
         if (mounted) setState(() => _dinliyor = true);
         await _speech.listen(
           localeId: "tr_TR",
@@ -208,7 +218,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             }
           },
           onResult: (result) {
-            if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
+            if (result.finalResult && result.recognizedWords.trim().isNotEmpty && !_isProcessing && !_konusuyor) {
               _cevapVer(result.recognizedWords);
             }
           },
@@ -219,11 +229,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // MİKROFONA DOKUNULDUĞUNDA: SESSİZ MOD <-> KONUŞMA MODU
   void _mikrofonaDokunuldu() async {
     if (_sessizMod) {
       setState(() {
         _sessizMod = false;
+        _isProcessing = false;
         _metin = "Seni dinliyorum...";
       });
       await _dinlemeBaslat();
@@ -235,14 +245,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _sessizMod = true;
         _dinliyor = false;
         _konusuyor = false;
+        _isProcessing = false;
         _metin = "Sessiz Mod Aktif (Sadece Yazı İle İletişim)";
       });
     }
   }
 
   void _cevapVer(String girdi) async {
-    if (girdi.trim().isEmpty || _konusuyor) return;
+    if (girdi.trim().isEmpty || _konusuyor || _isProcessing) return;
 
+    setState(() => _isProcessing = true);
     await _speech.stop();
 
     String cevap = "Merhaba $_kullaniciAdi, sizi dinledim. Ares sistemi devrede.";
@@ -257,12 +269,17 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     if (!_sessizMod) {
       await _seslendir(cevap);
     } else {
-      if (mounted) setState(() => _konusuyor = false);
+      if (mounted) {
+        setState(() {
+          _konusuyor = false;
+          _isProcessing = false;
+        });
+      }
     }
   }
 
   void _gonderilecekMesaj(String text) {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isProcessing) return;
     _textController.clear();
     FocusScope.of(context).unfocus();
     _cevapVer(text);
@@ -517,7 +534,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // EKRAN YERLEŞİMİ (TAM HİZALANMIŞ VE MODÜLER)
+  // EKRAN YERLEŞİMİ (CANLI SPEKTRUM VE BUTONLAR)
   // ============================================================
   @override
   Widget build(BuildContext context) {
@@ -544,7 +561,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 2. ORTA ANA SOHBET ALANI (GÖRSELDEKİ SABİT YAZIYI GİZLEYEN OPAK KATMAN)
+          // 2. ORTA ANA SOHBET ALANI
           Positioned(
             left: screenWidth * 0.28,
             right: screenWidth * 0.29,
@@ -599,7 +616,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 5. ORTA PANEL: YAZI GİRİŞ ALANI ("Herhangi bir şey sor")
+          // 5. ORTA PANEL: YAZI GİRİŞ ALANI
           Positioned(
             left: screenWidth * 0.315,
             bottom: screenHeight * 0.080,
@@ -618,7 +635,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 6. ORTA PANEL: MİKROFON BUTONU (TAM MERKEZ HALKA VE SESSİZ MOD KONTROLÜ)
+          // 6. ORTA PANEL: MİKROFON BUTONU
           Positioned(
             left: screenWidth * 0.608,
             bottom: screenHeight * 0.082,
@@ -632,7 +649,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 children: [
                   Container(color: Colors.transparent),
 
-                  // Dinleme anında mikrofonun etrafını saran tam merkezli halka
                   if (_dinliyor && !_sessizMod)
                     AnimatedBuilder(
                       animation: _pulseController,
@@ -651,7 +667,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       },
                     ),
 
-                  // Sessiz moddayken kırmızı sessiz mikrofon rozeti
                   if (_sessizMod)
                     Container(
                       padding: const EdgeInsets.all(4),
@@ -713,19 +728,19 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               double barHeight;
 
                               if (_sessizMod) {
-                                barHeight = 3.0;
+                                barHeight = 4.0;
                               } else if (_konusuyor) {
-                                barHeight = 8.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.0)).abs() * 16.0);
+                                barHeight = 10.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.0)).abs() * 16.0);
                               } else if (_dinliyor) {
-                                barHeight = 6.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.2)).abs() * 16.0 * _sesSeviyesi);
+                                barHeight = 8.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.2)).abs() * 16.0 * _sesSeviyesi);
                               } else {
-                                barHeight = 6.0;
+                                barHeight = 8.0;
                               }
 
                               return Container(
                                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
                                 width: 3.2,
-                                height: barHeight.clamp(3.0, 24.0),
+                                height: barHeight.clamp(4.0, 26.0),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(2),
