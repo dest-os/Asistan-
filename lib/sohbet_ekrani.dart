@@ -43,34 +43,34 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _yukle();
   }
 
-  // KESİN ERKEK SESİ MOTORU
   Future<void> _sesAyarla(String karakter) async {
-    await _tts.stop();
     await _tts.setLanguage("tr-TR");
-
+    
+    // Kadın sesini tamamen yok eden kalın erkek bas frekansı
     if (karakter == 'ERKEK') {
-      // Donanımsal Ses Frekansı (Erkek Bas Tonu)
-      await _tts.setPitch(0.4); 
+      await _tts.setPitch(0.55); // Derin Erkek/Derin Robot Tonu
       await _tts.setSpeechRate(0.42);
+    } else {
+      await _tts.setPitch(1.2);
+      await _tts.setSpeechRate(0.5);
+    }
 
-      try {
-        List<dynamic> voices = await _tts.getVoices;
-        for (var voice in voices) {
-          if (voice is Map) {
-            String name = voice["name"].toString().toLowerCase();
-            String locale = voice["locale"].toString().toLowerCase();
-
-            if (locale.contains("tr") && (name.contains("male") || name.contains("erkek") || name.contains("tr-x") || name.contains("byk"))) {
+    try {
+      List<dynamic> voices = await _tts.getVoices;
+      for (var voice in voices) {
+        if (voice is Map) {
+          String name = voice["name"].toString().toLowerCase();
+          String locale = voice["locale"].toString().toLowerCase();
+          
+          if (locale.contains("tr") && karakter == 'ERKEK') {
+            if (name.contains("male") || name.contains("erkek") || name.contains("tr-x")) {
               await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
               break;
             }
           }
         }
-      } catch (_) {}
-    } else {
-      await _tts.setPitch(1.1);
-      await _tts.setSpeechRate(0.5);
-    }
+      }
+    } catch (_) {}
 
     _tts.setStartHandler(() {
       if (mounted) setState(() => _konusuyor = true);
@@ -170,83 +170,68 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // ÖZELLEŞTİRİLMİŞ ÖZEL SİBERPUNK ALT PANEL
+  // SİBERPUNK TEMALI + MENÜSÜ
   void _artibutonIslevi() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (context) {
         return Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+          margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF08090C).withOpacity(0.95),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.cyan.withOpacity(0.6), width: 1.5),
+            color: const Color(0xFF0D0E15).withOpacity(0.95),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.cyan.withOpacity(0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.cyan.withOpacity(0.25),
-                blurRadius: 20,
+                color: Colors.cyan.withOpacity(0.2),
+                blurRadius: 15,
                 spreadRadius: 2,
               )
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.cyan.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+              _eklemeSecenegi(
+                icon: Icons.image_search_rounded,
+                label: "Galeri",
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                    if (image != null && mounted) {
+                      setState(() => _metin = "Görsel seçildi: ${image.name}");
+                    }
+                  } catch (_) {}
+                },
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _eklemeSecenegi(
-                    icon: Icons.photo_library_outlined,
-                    label: "Galeri",
-                    onTap: () async {
-                      Navigator.pop(context);
-                      try {
-                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                        if (image != null && mounted) {
-                          setState(() => _metin = "Görsel yüklendi: ${image.name}");
-                        }
-                      } catch (_) {}
-                    },
-                  ),
-                  _eklemeSecenegi(
-                    icon: Icons.camera_alt_outlined,
-                    label: "Kamera",
-                    onTap: () async {
-                      Navigator.pop(context);
-                      try {
-                        final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-                        if (photo != null && mounted) {
-                          setState(() => _metin = "Fotoğraf çekildi.");
-                        }
-                      } catch (_) {}
-                    },
-                  ),
-                  _eklemeSecenegi(
-                    icon: Icons.folder_open_outlined,
-                    label: "Dosya",
-                    onTap: () async {
-                      Navigator.pop(context);
-                      try {
-                        FilePickerResult? result = await FilePicker.platform.pickFiles();
-                        if (result != null && mounted) {
-                          setState(() => _metin = "Dosya seçildi: ${result.files.single.name}");
-                        }
-                      } catch (_) {}
-                    },
-                  ),
-                ],
+              _eklemeSecenegi(
+                icon: Icons.camera_enhance_rounded,
+                label: "Kamera",
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                    if (photo != null && mounted) {
+                      setState(() => _metin = "Fotoğraf çekildi.");
+                    }
+                  } catch (_) {}
+                },
+              ),
+              _eklemeSecenegi(
+                icon: Icons.folder_zip_rounded,
+                label: "Dosya",
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    FilePickerResult? result = await FilePicker.platform.pickFiles();
+                    if (result != null && mounted) {
+                      setState(() => _metin = "Dosya yüklendi: ${result.files.single.name}");
+                    }
+                  } catch (_) {}
+                },
               ),
             ],
           ),
@@ -262,26 +247,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 54,
-            height: 54,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.black,
               border: Border.all(color: Colors.cyan, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.cyan.withOpacity(0.3),
-                  blurRadius: 8,
-                )
-              ],
             ),
-            child: Icon(icon, color: Colors.cyan, size: 24),
+            child: Icon(icon, color: Colors.cyan, size: 26),
           ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -317,7 +292,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // YAZI ALANI (Görsel üzerindeki eski metni tam örter)
+          // YAZI ALANI
           Positioned(
             left: MediaQuery.of(context).size.width * 0.27,
             right: MediaQuery.of(context).size.width * 0.31,
@@ -329,7 +304,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
                 _metin,
                 style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -338,7 +313,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // + (ARTI) BUTONU DOKUNMA ALANI
+          // + (ARTI) BUTONU ISLEVI
           Positioned(
             left: plusLeft,
             bottom: plusBottom,
@@ -351,7 +326,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // MİKROFON VE ANİMASYON HAKASI
+          // MİKROFON VE ANİMASYON KATMANI
           Positioned(
             left: micLeft,
             bottom: micBottom,
