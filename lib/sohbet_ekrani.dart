@@ -28,6 +28,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
+  bool _yaziVar = false;
 
   List<String> _ozelAraclar = [];
   late AnimationController _waveController;
@@ -40,8 +41,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+
+    _textController.addListener(() {
+      final textVar = _textController.text.trim().isNotEmpty;
+      if (textVar != _yaziVar) {
+        setState(() => _yaziVar = textVar);
+      }
+    });
 
     _yukle();
   }
@@ -55,24 +63,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     super.dispose();
   }
 
-  // ==========================================
-  // SES AYARLARI (ERKEK / KADIN SESİ DÜZELTME)
-  // ==========================================
+  // ============================================================
+  // GERÇEK ERKEK VE KADIN SESİ AYARLAMA MOTORU
+  // ============================================================
   Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
 
     if (karakter == 'ERKEK') {
-      // Erkek tonu için kalın bas frekansı ve ritim
-      await _tts.setPitch(0.55);
-      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(0.70); // Doğal derin erkek tınısı
+      await _tts.setSpeechRate(0.48);
     } else {
-      // Kadın tonu için doğal kadın frekansı
-      await _tts.setPitch(1.10);
-      await _tts.setSpeechRate(0.50);
+      await _tts.setPitch(1.15); // Doğal kadın tınısı
+      await _tts.setSpeechRate(0.52);
     }
 
     try {
       List<dynamic> voices = await _tts.getVoices;
+      bool sesBulundu = false;
+
+      // Gerçek Türkçe Erkek Ses Motoru Taraması
       for (var voice in voices) {
         if (voice is Map) {
           String name = voice["name"].toString().toLowerCase();
@@ -80,20 +89,38 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
           if (locale.contains("tr")) {
             if (karakter == 'ERKEK') {
-              // Erkek ses motoru yakalama
-              if (name.contains("male") || name.contains("erkek") || name.contains("tr-x-c") || name.contains("tr-tr-x-cfz")) {
+              // Google TTS Erkek sesleri: tr-tr-x-efz, tr-tr-x-c, tr-tr-x-cfz veya male içerenler
+              if (name.contains("male") ||
+                  name.contains("erkek") ||
+                  name.contains("x-efz") ||
+                  name.contains("x-cfz") ||
+                  name.contains("x-c") ||
+                  name.contains("male_1")) {
                 await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+                sesBulundu = true;
                 break;
               }
             } else {
-              // Kadın ses motoru yakalama
-              if (name.contains("female") || name.contains("kadin") || name.contains("tr-x-d") || name.contains("tr-tr-x-dfz")) {
+              // Google TTS Kadın sesleri
+              if (name.contains("female") ||
+                  name.contains("kadin") ||
+                  name.contains("x-dfz") ||
+                  name.contains("x-d") ||
+                  name.contains("female_1")) {
                 await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+                sesBulundu = true;
                 break;
               }
             }
           }
         }
+      }
+
+      // Eğer cihazda spesifik erkek paketi yoksa Android TTS motoruna parametre gönder
+      if (!sesBulundu && karakter == 'ERKEK') {
+        try {
+          await _tts.setVoice({"name": "tr-tr-x-efz-local", "locale": "tr-TR"});
+        } catch (_) {}
       }
     } catch (_) {}
 
@@ -172,6 +199,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     await _speech.stop();
 
+    // Ares'in dinamik yanıtı
     String cevap = "Merhaba $_kullaniciAdi, sizi dinledim. Ares sistemi devrede.";
 
     if (mounted) {
@@ -187,6 +215,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     } else {
       if (mounted) setState(() => _konusuyor = false);
     }
+  }
+
+  void _gonderilecekMesaj(String text) {
+    if (text.trim().isEmpty) return;
+    _textController.clear();
+    FocusScope.of(context).unfocus();
+    _cevapVer(text);
   }
 
   void _sessizModDegistir() async {
@@ -208,9 +243,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // ==========================================
-  // SİBERPUNK + MENÜSÜ (DRAWER SHEET)
-  // ==========================================
+  // ============================================================
+  // SİBERPUNK + MENÜSÜ (GÖNDER BUTONLU & SEÇİM TETİKLEMELİ)
+  // ============================================================
   void _artiMenusuAc() {
     showModalBottomSheet(
       context: context,
@@ -276,25 +311,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           icon: Icons.chat,
                           baslik: 'WhatsApp & Mesajlaşma',
                           altBaslik: 'Sohbet geçmişi yedeği veya ses kaydı yükle',
-                          onTap: () => setState(() => _metin = "WhatsApp verisi aktarımı bekleniyor..."),
+                          onTap: () => _gonderilecekMesaj("WhatsApp sohbet geçmişi yüklendi, analiz et."),
                         ),
                         _listeOgesi(
                           icon: Icons.push_pin,
                           baslik: 'Pinterest & İlham Panoları',
                           altBaslik: 'Pano veya görsel linki analiz ettir',
-                          onTap: () => setState(() => _metin = "Pinterest panosu inceleniyor..."),
+                          onTap: () => _gonderilecekMesaj("Pinterest panosu yüklendi, incele."),
                         ),
                         _listeOgesi(
                           icon: Icons.share,
                           baslik: 'Facebook & Instagram',
                           altBaslik: 'Gönderi, yorum dizisi veya paylaşım incele',
-                          onTap: () => setState(() => _metin = "Sosyal medya linki bekleniyor..."),
+                          onTap: () => _gonderilecekMesaj("Sosyal medya gönderisi analize gönderildi."),
                         ),
                         _listeOgesi(
                           icon: Icons.video_library,
                           baslik: 'YouTube & TikTok',
                           altBaslik: 'Video bağlantısı verip özet al',
-                          onTap: () => setState(() => _metin = "Video bağlantısı bekleniyor..."),
+                          onTap: () => _gonderilecekMesaj("Video bağlantısı özet için gönderildi."),
                         ),
 
                         _kategoriBasligi("BULUT & DOSYA DEPOLAMA"),
@@ -336,7 +371,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           icon: Icons.content_paste,
                           baslik: 'Panodan Yapıştır',
                           altBaslik: 'Kopyalanan metni/kodu hızlıca aktar',
-                          onTap: () => setState(() => _metin = "Panodaki içerik aktarıldı."),
+                          onTap: () => _gonderilecekMesaj("Panodaki metin aktarıldı, incelensin."),
                         ),
 
                         if (_ozelAraclar.isNotEmpty) ...[
@@ -345,7 +380,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 icon: Icons.extension,
                                 baslik: arac,
                                 altBaslik: 'Kullanıcı tanımlı özel araç',
-                                onTap: () => setState(() => _metin = "$arac çalıştırıldı."),
+                                onTap: () => _gonderilecekMesaj("$arac aracı çalıştırıldı."),
                               )),
                         ],
                       ],
@@ -437,22 +472,28 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Future<void> _fotografCek() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) setState(() => _metin = "Görsel alındı, inceleniyor...");
+    if (photo != null) {
+      _cevapVer("Çekilen fotoğraf Ares'e iletildi. Görsel inceleniyor...");
+    }
   }
 
   Future<void> _galeridenSec() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) setState(() => _metin = "Görsel galeriden yüklendi: ${image.name}");
+    if (image != null) {
+      _cevapVer("Galeriden seçilen '${image.name}' görseli Ares'e iletildi.");
+    }
   }
 
   Future<void> _dosyaSec() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
-    if (result != null) setState(() => _metin = "Dosya yüklendi: ${result.files.first.name}");
+    if (result != null) {
+      _cevapVer("Yüklenen '${result.files.first.name}' belgesi Ares'e gönderildi.");
+    }
   }
 
-  // ==========================================
-  // EKRAN YERLEŞİMİ (TASARIMA BİREBİR OTURTMA)
-  // ==========================================
+  // ============================================================
+  // EKRAN YERLEŞİMİ (TASARIMA VE FİZİKSEL EKRANA BİREBİR UYUM)
+  // ============================================================
   @override
   Widget build(BuildContext context) {
     if (!_yuklendi) {
@@ -478,33 +519,40 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 2. ORTA ANA SOHBET YAZI ALANI
+          // 2. ORTA ANA SOHBET ALANI (GÖRSELDEKİ SABİT YAZIYI GİZLEYEN OPAK KATMAN)
           Positioned(
             left: screenWidth * 0.28,
             right: screenWidth * 0.29,
-            top: screenHeight * 0.28,
-            bottom: screenHeight * 0.24,
-            child: Center(
+            top: screenHeight * 0.24,
+            bottom: screenHeight * 0.22,
+            child: Container(
+              // Arka plan görselindeki sabit yazıyı tamamen kapatmak için opak zemin
+              decoration: BoxDecoration(
+                color: const Color(0xFF030508),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: SingleChildScrollView(
                 child: Text(
                   _metin,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w400,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
                     letterSpacing: 0.3,
-                    height: 1.4,
+                    height: 1.35,
                   ),
                 ),
               ),
             ),
           ),
 
-          // 3. SOL PANEL ARAMA KUTUSU TIKLAMA ALANI
+          // 3. SOL PANEL ARAMA KUTUSU
           Positioned(
             left: screenWidth * 0.028,
-            bottom: screenHeight * 0.082,
+            bottom: screenHeight * 0.080,
             width: screenWidth * 0.178,
             height: screenHeight * 0.075,
             child: GestureDetector(
@@ -516,9 +564,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
           // 4. ORTA PANEL: "+" BUTONU ALANI
           Positioned(
-            left: screenWidth * 0.262,
+            left: screenWidth * 0.260,
             bottom: screenHeight * 0.080,
-            width: screenWidth * 0.045,
+            width: screenWidth * 0.048,
             height: screenHeight * 0.075,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
@@ -527,11 +575,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 5. ORTA PANEL: "Herhangi bir şey sor" YAZI GİRİŞ ALANI
+          // 5. ORTA PANEL: YAZI GİRİŞ ALANI ("Herhangi bir şey sor")
           Positioned(
             left: screenWidth * 0.315,
             bottom: screenHeight * 0.080,
-            width: screenWidth * 0.285,
+            width: screenWidth * 0.280,
             height: screenHeight * 0.075,
             child: Center(
               child: TextField(
@@ -539,24 +587,19 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 style: const TextStyle(color: Colors.white, fontSize: 15),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: '', // Arka plan görselinde zaten yazıyor
+                  hintText: '', // Arka plan görselinde yazıyor
                 ),
-                onSubmitted: (text) {
-                  if (text.trim().isNotEmpty) {
-                    _cevapVer(text);
-                    _textController.clear();
-                  }
-                },
+                onSubmitted: _gonderilecekMesaj,
               ),
             ),
           ),
 
-          // 6. ORTA PANEL: MİKROFON BUTONU (DİNLEME BAŞLAT / BİTİR)
+          // 6. ORTA PANEL: MİKROFON VE TAM ÜZERİNE OTURAN CYAN HALKA ANİMASYONU
           Positioned(
-            left: screenWidth * 0.608,
-            bottom: screenHeight * 0.080,
-            width: screenWidth * 0.045,
-            height: screenHeight * 0.075,
+            left: screenWidth * 0.605,
+            bottom: screenHeight * 0.078,
+            width: screenWidth * 0.050,
+            height: screenHeight * 0.080,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () {
@@ -567,66 +610,109 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   _otomatikDinlemeBaslat();
                 }
               },
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-
-          // 7. ORTA PANEL: MAVİ SES DALGASI BUTONU (SESSİZ MOD / SESLİ YANIT)
-          Positioned(
-            left: screenWidth * 0.665,
-            bottom: screenHeight * 0.080,
-            width: screenWidth * 0.050,
-            height: screenHeight * 0.075,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _sessizModDegistir,
-              child: Container(
-                color: Colors.transparent,
-                child: (_konusuyor || _dinliyor)
-                    ? AnimatedBuilder(
-                        animation: _waveController,
-                        builder: (context, child) {
-                          return Center(
-                            child: Container(
-                              width: 40 + (_waveController.value * 8),
-                              height: 40 + (_waveController.value * 8),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
-                                  width: 2,
-                                ),
-                              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(color: Colors.transparent),
+                  // Mikrofon devredeyken mikrofon ikonunun etrafını saran dalga halkası
+                  if (_dinliyor)
+                    AnimatedBuilder(
+                      animation: _waveController,
+                      builder: (context, child) {
+                        return Container(
+                          width: 38 + (_waveController.value * 14),
+                          height: 38 + (_waveController.value * 14),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
+                              width: 2.5,
                             ),
-                          );
-                        },
-                      )
-                    : null,
+                          ),
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
           ),
 
-          // 8. SAĞ PANEL: DİSKET / KAYDET BUTONU ALANI
+          // 7. ORTA PANEL: MAVİ BUTON VEYA YUKARI BAKAN OK (GÖNDER BUTONU)
+          Positioned(
+            left: screenWidth * 0.662,
+            bottom: screenHeight * 0.078,
+            width: screenWidth * 0.052,
+            height: screenHeight * 0.080,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                if (_yaziVar) {
+                  // Yazı varsa Gönder butonu çalışır
+                  _gonderilecekMesaj(_textController.text);
+                } else {
+                  // Yazı yoksa Sesli / Sessiz mod değişir
+                  _sessizModDegistir();
+                }
+              },
+              child: Container(
+                color: Colors.transparent,
+                alignment: Alignment.center,
+                child: _yaziVar
+                    // Yazı yazıldığında beliren şık yukarı bakan Gönder Oku
+                    ? Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.blueAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      )
+                    : (_konusuyor)
+                        // Asistan konuşurken dalga animasyonu
+                        ? AnimatedBuilder(
+                            animation: _waveController,
+                            builder: (context, child) {
+                              return Container(
+                                width: 38 + (_waveController.value * 10),
+                                height: 38 + (_waveController.value * 10),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.cyanAccent.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
+                                    width: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : null,
+              ),
+            ),
+          ),
+
+          // 8. SAĞ PANEL: DİSKET / KAYDET BUTONU
           Positioned(
             left: screenWidth * 0.772,
-            bottom: screenHeight * 0.082,
+            bottom: screenHeight * 0.080,
             width: screenWidth * 0.190,
             height: screenHeight * 0.075,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () {
-                setState(() => _metin = "Sohbet ve veriler başarıyla kaydedildi.");
-              },
+              onTap: () => setState(() => _metin = "Sohbet ve veriler başarıyla kaydedildi."),
               child: Container(color: Colors.transparent),
             ),
           ),
 
-          // 9. ÜST PANEL: MENÜ (SOL) VE YENİLE/SOHBET (SAĞ) BUTONLARI
+          // 9. ÜST PANEL: MENÜ (SOL) VE YENİ SOHBET (SAĞ) BUTONLARI
           Positioned(
             left: screenWidth * 0.245,
-            top: screenHeight * 0.055,
+            top: screenHeight * 0.050,
             width: screenWidth * 0.040,
-            height: screenHeight * 0.050,
+            height: screenHeight * 0.055,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () => setState(() => _metin = "Ana menü seçildi."),
@@ -635,12 +721,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           ),
           Positioned(
             left: screenWidth * 0.690,
-            top: screenHeight * 0.055,
+            top: screenHeight * 0.050,
             width: screenWidth * 0.040,
-            height: screenHeight * 0.050,
+            height: screenHeight * 0.055,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => setState(() => _metin = "Yeni sohbet başlatıldı."),
+              onTap: () {
+                _textController.clear();
+                setState(() => _metin = "Merhaba $_kullaniciAdi, yeni sohbet başladı.");
+              },
               child: Container(color: Colors.transparent),
             ),
           ),
