@@ -11,21 +11,36 @@ class GirisEkrani extends StatefulWidget {
 }
 
 class _GirisEkraniState extends State<GirisEkrani> {
-  String? _secilenKarakter;
+  String _secilenKarakter = 'ERKEK'; // Varsayılan Erkek Ares
   final TextEditingController _kullaniciAdiController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _kullaniciAdiController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _kullaniciAdiController.dispose();
+    super.dispose();
+  }
+
   bool get _formGecerli {
-    return _secilenKarakter != null && _kullaniciAdiController.text.trim().isNotEmpty;
+    return _secilenKarakter.isNotEmpty && _kullaniciAdiController.text.trim().isNotEmpty;
   }
 
   Future<void> _devamEt() async {
     if (!_formGecerli) return;
 
+    // Mikrofon izni kontrolü
     PermissionStatus status = await Permission.microphone.request();
 
     if (status.isGranted) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('secilen_karakter', _secilenKarakter!);
+      await prefs.setString('secilen_karakter', _secilenKarakter);
       await prefs.setString('kullanici_adi', _kullaniciAdiController.text.trim());
 
       if (!mounted) return;
@@ -35,9 +50,13 @@ class _GirisEkraniState extends State<GirisEkrani> {
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Ares'in sizi duyabilmesi için mikrofon izni vermeniz gerekmektedir."),
-          backgroundColor: Colors.redAccent,
+        SnackBar(
+          content: const Text(
+            "Ares'in sizi duyabilmesi ve iletişim kurabilmesi için mikrofon izni gereklidir.",
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red.shade900,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -45,130 +64,198 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
   @override
   Widget build(BuildContext context) {
+    // Hem Telefon Hem Tablette Otomatik 16:9 Oranını Koruyan Kapsayıcı
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Arka Plan Görseli
-          Positioned.fill(
-            child: Image.asset(
-              'assets/giris_ekrani.png',
-              fit: BoxFit.fill,
-            ),
-          ),
+      body: Center(
+        child: AspectRatio(
+          aspectRatio: 16 / 9, // Tüm cihazlarda tasarımı kitleyen standart oran
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final h = constraints.maxHeight;
 
-          // Sol Karakter (KADIN) Seçim Alanı
-          Positioned(
-            left: 0,
-            top: 0,
-            width: MediaQuery.of(context).size.width * 0.35,
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                setState(() => _secilenKarakter = 'KADIN');
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: _secilenKarakter == 'KADIN'
-                      ? Border.all(color: Colors.cyanAccent, width: 2)
-                      : null,
-                ),
-              ),
-            ),
-          ),
-
-          // Sağ Karakter (ERKEK) Seçim Alanı
-          Positioned(
-            right: 0,
-            top: 0,
-            width: MediaQuery.of(context).size.width * 0.35,
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                setState(() => _secilenKarakter = 'ERKEK');
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: _secilenKarakter == 'ERKEK'
-                      ? Border.all(color: Colors.cyanAccent, width: 2)
-                      : null,
-                ),
-              ),
-            ),
-          ),
-
-          // Kullanıcı Adı Giriş Kutusu (Hizalı)
-          Positioned(
-            left: MediaQuery.of(context).size.width * 0.42,
-            top: MediaQuery.of(context).size.height * 0.56,
-            width: MediaQuery.of(context).size.width * 0.31,
-            height: 40,
-            child: TextField(
-              controller: _kullaniciAdiController,
-              style: const TextStyle(
-                color: Colors.cyanAccent,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-              cursorColor: Colors.cyanAccent,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '',
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-
-          // Alt İleri Ok Butonu (DEVAM ET)
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: InkWell(
-                onTap: _formGecerli ? _devamEt : null,
-                borderRadius: BorderRadius.circular(30),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _formGecerli ? Colors.cyanAccent.withOpacity(0.2) : Colors.white10,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: _formGecerli ? Colors.cyanAccent : Colors.white24,
-                      width: 2,
+              return Stack(
+                children: [
+                  // 1. ARKA PLAN GÖRSELİ
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/giris_ekrani.png',
+                      fit: BoxFit.fill,
+                      errorBuilder: (_, __, ___) => Container(color: Colors.black),
                     ),
-                    boxShadow: _formGecerli
-                        ? [BoxShadow(color: Colors.cyanAccent.withOpacity(0.4), blurRadius: 10)]
-                        : [],
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "DEVAM ET",
-                        style: TextStyle(
-                          color: _formGecerli ? Colors.cyanAccent : Colors.white38,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+
+                  // 2. SOL KARAKTER SEÇİM ALANI (KADIN ARES)
+                  Positioned(
+                    left: w * 0.040,
+                    top: h * 0.120,
+                    width: w * 0.310,
+                    height: h * 0.380,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: () {
+                        setState(() => _secilenKarakter = 'KADIN');
+                      },
+                      child: Stack(
+                        children: [
+                          Container(color: Colors.transparent),
+                          // Kadın Ares seçildiğinde mavi halkanın içinde yanan onay noktası
+                          if (_secilenKarakter == 'KADIN')
+                            Positioned(
+                              right: w * 0.022,
+                              bottom: h * 0.038,
+                              width: 22,
+                              height: 22,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.cyanAccent,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.cyanAccent.withOpacity(0.8),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 3. SAĞ KARAKTER SEÇİM ALANI (ERKEK ARES)
+                  Positioned(
+                    right: w * 0.040,
+                    top: h * 0.120,
+                    width: w * 0.310,
+                    height: h * 0.380,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: () {
+                        setState(() => _secilenKarakter = 'ERKEK');
+                      },
+                      child: Stack(
+                        children: [
+                          Container(color: Colors.transparent),
+                          // Erkek Ares seçildiğinde mavi halkanın içinde yanan onay noktası
+                          if (_secilenKarakter == 'ERKEK')
+                            Positioned(
+                              left: w * 0.022,
+                              bottom: h * 0.038,
+                              width: 22,
+                              height: 22,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.cyanAccent,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.cyanAccent.withOpacity(0.8),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 4. KULLANICI ADI GİRİŞ KUTUSU (TAM OTURTULMUŞ KOYU ALAN)
+                  Positioned(
+                    left: w * 0.425,
+                    top: h * 0.565,
+                    width: w * 0.335,
+                    height: h * 0.090,
+                    child: Center(
+                      child: TextField(
+                        controller: _kullaniciAdiController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                        cursorColor: Colors.cyanAccent,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Adınızı yazın...',
+                          hintStyle: TextStyle(
+                            color: Colors.white30,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onSubmitted: (_) {
+                          if (_formGecerli) _devamEt();
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // 5. DEVAM ET / BAŞLAT BUTONU (SİBERPUNK JARVIS BUTONU)
+                  Positioned(
+                    bottom: h * 0.120,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: _formGecerli ? _devamEt : null,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _formGecerli ? const Color(0xFF041C32) : Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: _formGecerli ? Colors.cyanAccent : Colors.white12,
+                              width: 1.8,
+                            ),
+                            boxShadow: _formGecerli
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.cyanAccent.withOpacity(0.4),
+                                      blurRadius: 16,
+                                      spreadRadius: 1,
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "ARES SİSTEMİNİ BAŞLAT",
+                                style: TextStyle(
+                                  color: _formGecerli ? Colors.cyanAccent : Colors.white24,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: _formGecerli ? Colors.cyanAccent : Colors.white24,
+                                size: 16,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        color: _formGecerli ? Colors.cyanAccent : Colors.white38,
-                        size: 20,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
+                ],
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }
