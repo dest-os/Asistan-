@@ -10,13 +10,19 @@ class GirisEkrani extends StatefulWidget {
   State<GirisEkrani> createState() => _GirisEkraniState();
 }
 
-class _GirisEkraniState extends State<GirisEkrani> {
+class _GirisEkraniState extends State<GirisEkrani> with SingleTickerProviderStateMixin {
   String _secilenKarakter = 'ERKEK'; // Varsayılan Erkek Ares
   final TextEditingController _kullaniciAdiController = TextEditingController();
+  late AnimationController _glowController;
 
   @override
   void initState() {
     super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
     _kullaniciAdiController.addListener(() {
       setState(() {});
     });
@@ -24,6 +30,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
   @override
   void dispose() {
+    _glowController.dispose();
     _kullaniciAdiController.dispose();
     super.dispose();
   }
@@ -73,6 +80,9 @@ class _GirisEkraniState extends State<GirisEkrani> {
               final w = constraints.maxWidth;
               final h = constraints.maxHeight;
 
+              final bool kadinSecili = _secilenKarakter == 'KADIN';
+              final bool erkekSecili = _secilenKarakter == 'ERKEK';
+
               return Stack(
                 children: [
                   // 1. ARKA PLAN GÖRSELİ
@@ -84,66 +94,82 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 2. SOL KARAKTER SEÇİMİ (KADIN ARES YUVARLAK PORTRE ALANI)
+                  // 2. SOL KARAKTER SEÇİMİ (KADIN ARES DOĞAL PARLAMA & DOKUNMA ALANI)
                   Positioned(
-                    left: w * 0.155,
-                    top: h * 0.145,
-                    width: w * 0.140,
-                    height: h * 0.320,
+                    left: w * 0.040,
+                    top: h * 0.100,
+                    width: w * 0.380,
+                    height: h * 0.420,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
                         setState(() => _secilenKarakter = 'KADIN');
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: _secilenKarakter == 'KADIN'
-                              ? Border.all(color: Colors.cyanAccent, width: 3.5)
-                              : Border.all(color: Colors.transparent, width: 3.5),
-                          boxShadow: _secilenKarakter == 'KADIN'
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.6),
-                                    blurRadius: 20,
-                                    spreadRadius: 3,
-                                  )
-                                ]
-                              : [],
-                        ),
+                      child: AnimatedBuilder(
+                        animation: _glowController,
+                        builder: (context, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              // Seçiliyse orijinal mavi hatların üzerine zarif bir neon parlama yayılır
+                              gradient: kadinSecili
+                                  ? RadialGradient(
+                                      center: const Alignment(-0.6, -0.1),
+                                      radius: 0.85,
+                                      colors: [
+                                        Colors.cyanAccent.withOpacity(0.20 + (_glowController.value * 0.15)),
+                                        const Color(0xFF0066FF).withOpacity(0.08),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.2, 0.65, 1.0],
+                                    )
+                                  : null,
+                              color: kadinSecili
+                                  ? Colors.transparent
+                                  : Colors.black.withOpacity(0.40), // Seçili değilse loş durur
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
 
-                  // 3. SAĞ KARAKTER SEÇİMİ (ERKEK ARES YUVARLAK PORTRE ALANI)
+                  // 3. SAĞ KARAKTER SEÇİMİ (ERKEK ARES DOĞAL PARLAMA & DOKUNMA ALANI)
                   Positioned(
-                    right: w * 0.155,
-                    top: h * 0.145,
-                    width: w * 0.140,
-                    height: h * 0.320,
+                    right: w * 0.040,
+                    top: h * 0.100,
+                    width: w * 0.380,
+                    height: h * 0.420,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
                         setState(() => _secilenKarakter = 'ERKEK');
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: _secilenKarakter == 'ERKEK'
-                              ? Border.all(color: Colors.cyanAccent, width: 3.5)
-                              : Border.all(color: Colors.transparent, width: 3.5),
-                          boxShadow: _secilenKarakter == 'ERKEK'
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.6),
-                                    blurRadius: 20,
-                                    spreadRadius: 3,
-                                  )
-                                ]
-                              : [],
-                        ),
+                      child: AnimatedBuilder(
+                        animation: _glowController,
+                        builder: (context, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              // Seçiliyse orijinal mavi hatların üzerine zarif bir neon parlama yayılır
+                              gradient: erkekSecili
+                                  ? RadialGradient(
+                                      center: const Alignment(0.6, -0.1),
+                                      radius: 0.85,
+                                      colors: [
+                                        Colors.cyanAccent.withOpacity(0.20 + (_glowController.value * 0.15)),
+                                        const Color(0xFF0066FF).withOpacity(0.08),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.2, 0.65, 1.0],
+                                    )
+                                  : null,
+                              color: erkekSecili
+                                  ? Colors.transparent
+                                  : Colors.black.withOpacity(0.40), // Seçili değilse loş durur
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
