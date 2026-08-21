@@ -45,13 +45,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _tts = FlutterTts();
     _audioPlayer = AudioPlayer();
 
-    // Spektrum animasyonu döngüsü
     _spectrumController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
     )..repeat(reverse: true);
 
-    // Mikrofon etrafındaki nabız halkası
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -64,7 +62,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     });
 
-    // Ses çalma durumu dinleyicisi
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
         if (state == PlayerState.playing) {
@@ -115,7 +112,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _yuklendi = true;
       });
 
-      // Açılışta 350ms güvenli gecikmeyle mikrofonu devreye sok
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted && !_sessizMod) {
           _dinlemeBaslat();
@@ -139,14 +135,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         });
       }
 
-      // Ücretsiz ve yüksek kaliteli doğal Türkçe ses akışı
       final encodedText = Uri.encodeComponent(metin);
       final String streamUrl = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=tr&client=tw-ob";
 
       await _audioPlayer.stop();
       await _audioPlayer.play(UrlSource(streamUrl));
     } catch (_) {
-      // Çevrimdışı yedek motoru
       try {
         await _tts.setLanguage("tr-TR");
         if (_karakter == 'ERKEK') {
@@ -693,7 +687,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               },
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Color(0xFF0747A6), // Arka plandaki sabit çizgileri örten derin mavi zemin
+                  color: Color(0xFF0747A6),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -705,13 +699,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 ),
                 alignment: Alignment.center,
                 child: _yaziVar
-                    // Yazı varsa yukarı bakan gönder oku
                     ? const Icon(
                         Icons.arrow_upward_rounded,
                         color: Colors.white,
                         size: 24,
                       )
-                    // Canlı ve şık spektrum animasyonu
                     : AnimatedBuilder(
                         animation: _spectrumController,
                         builder: (context, child) {
@@ -721,15 +713,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               double barHeight;
 
                               if (_sessizMod) {
-                                barHeight = 3.0; // Sessiz modda sakin
+                                barHeight = 3.0;
                               } else if (_konusuyor) {
-                                // Ares konuşurken ritmik dans
                                 barHeight = 8.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.0)).abs() * 16.0);
                               } else if (_dinliyor) {
-                                // Kullanıcı konuşurken desibele duyarlı hareket
                                 barHeight = 6.0 + (sin((_spectrumController.value * 2 * pi) + (index * 1.2)).abs() * 16.0 * _sesSeviyesi);
                               } else {
-                                barHeight = 6.0; // Bekleme
+                                barHeight = 6.0;
                               }
 
                               return Container(
