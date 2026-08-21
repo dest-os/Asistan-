@@ -24,11 +24,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _textController = TextEditingController();
 
-  String _metin = "Merhaba İbrahim, senin için ne yapabilirim?";
-  bool _sessizMod = false; // Kafe / Sessiz mod
+  String _metin = "Seni dinliyorum...";
+  bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
   bool _yaziVar = false;
+  bool _isSpeechInitialized = false;
 
   List<String> _ozelAraclar = [];
   late AnimationController _pulseController;
@@ -39,7 +40,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
 
-    // Sadece mikrofon etrafındaki nabız dairesi animasyonu
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -52,7 +52,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     });
 
-    _yukle();
+    // Ekran tamamen oluştuktan sonra yükleme ve dinlemeyi güvenle başlat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _yukle();
+    });
   }
 
   @override
@@ -65,71 +68,75 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // KESİN VE GARANTİLİ TÜRKÇE ERKEK / KADIN SESİ AYARI
+  // KESİN TÜRKÇE ERKEK SESİ VE KADIN SESİ AYARLARI
   // ============================================================
   Future<void> _sesAyarla(String karakter) async {
     try {
-      // Android varsayılan Google TTS motorunu seç
-      await _tts.setEngine("com.google.android.tts");
+      await _tts.setLanguage("tr-TR");
+      await _tts.awaitSpeakCompletion(true);
     } catch (_) {}
 
-    await _tts.setLanguage("tr-TR");
-
     if (karakter == 'ERKEK') {
-      // Erkek tonu için kalın bas frekansı
-      await _tts.setPitch(0.40);
-      await _tts.setSpeechRate(0.42);
+      // Erkek tonu için kalınlık ve hız
+      await _tts.setPitch(0.65);
+      await _tts.setSpeechRate(0.46);
     } else {
-      // Kadın tonu için standart kadın frekansı
-      await _tts.setPitch(1.10);
-      await _tts.setSpeechRate(0.50);
+      // Kadın tonu
+      await _tts.setPitch(1.15);
+      await _tts.setSpeechRate(0.52);
     }
 
     try {
-      List<dynamic> voices = await _tts.getVoices;
-      bool bulundu = false;
+      dynamic voices = await _tts.getVoices;
+      if (voices is List) {
+        Map<String, String>? secilecekSes;
 
-      for (var v in voices) {
-        if (v is Map) {
-          String name = (v["name"] ?? "").toString().toLowerCase();
-          String locale = (v["locale"] ?? "").toString().toLowerCase();
-          String gender = (v["gender"] ?? "").toString().toLowerCase();
+        for (var v in voices) {
+          if (v is Map) {
+            String name = (v["name"] ?? "").toString().toLowerCase();
+            String locale = (v["locale"] ?? "").toString().toLowerCase();
 
-          if (locale.contains("tr")) {
-            if (karakter == 'ERKEK') {
-              // Google TTS Türkçe Erkek ses profilleri
-              if (gender == "male" ||
-                  name.contains("male") ||
-                  name.contains("erkek") ||
-                  name.contains("x-efz") ||
-                  name.contains("x-cfz") ||
-                  name.contains("x-c") ||
-                  name.contains("male_1")) {
-                await _tts.setVoice({"name": v["name"], "locale": v["locale"]});
-                bulundu = true;
-                break;
-              }
-            } else {
-              // Google TTS Türkçe Kadın ses profilleri
-              if (gender == "female" ||
-                  name.contains("female") ||
-                  name.contains("kadin") ||
-                  name.contains("x-dfz") ||
-                  name.contains("x-d")) {
-                await _tts.setVoice({"name": v["name"], "locale": v["locale"]});
-                bulundu = true;
-                break;
+            if (locale.contains("tr")) {
+              if (karakter == 'ERKEK') {
+                // Android Google TTS Erkek Ses Paketleri
+                if (name.contains("male") ||
+                    name.contains("erkek") ||
+                    name.contains("tr-x-c") ||
+                    name.contains("x-efz") ||
+                    name.contains("x-cfz") ||
+                    name.contains("tr-tr-x-efz") ||
+                    name.contains("tr-ba-x-b")) {
+                  secilecekSes = {
+                    "name": v["name"].toString(),
+                    "locale": v["locale"].toString()
+                  };
+                  break;
+                }
+              } else {
+                // Kadın Ses Paketleri
+                if (name.contains("female") ||
+                    name.contains("kadin") ||
+                    name.contains("x-dfz") ||
+                    name.contains("tr-tr-x-dfz")) {
+                  secilecekSes = {
+                    "name": v["name"].toString(),
+                    "locale": v["locale"].toString()
+                  };
+                  break;
+                }
               }
             }
           }
         }
-      }
 
-      // Eğer cihaz listesinde bulunamazsa doğrudan zorunlu erkek profili
-      if (!bulundu && karakter == 'ERKEK') {
-        try {
-          await _tts.setVoice({"name": "tr-tr-x-efz#male_1", "locale": "tr-TR"});
-        } catch (_) {}
+        if (secilecekSes != null) {
+          await _tts.setVoice(secilecekSes);
+        } else if (karakter == 'ERKEK') {
+          // Yedek erkek ses ataması
+          try {
+            await _tts.setVoice({"name": "tr-tr-x-efz-local", "locale": "tr-TR"});
+          } catch (_) {}
+        }
       }
     } catch (_) {}
 
@@ -140,7 +147,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _tts.setCompletionHandler(() {
       if (mounted) {
         setState(() => _konusuyor = false);
-        if (!_sessizMod) _otomatikDinlemeBaslat();
+        if (!_sessizMod) {
+          Future.delayed(const Duration(milliseconds: 250), () {
+            if (mounted && !_sessizMod && !_konusuyor) {
+              _dinlemeBaslat();
+            }
+          });
+        }
       }
     });
 
@@ -163,39 +176,67 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ? 'assets/kadin_ares_ekrani.png'
             : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
-        _metin = "Merhaba $_kullaniciAdi, senin için ne yapabilirim?";
+        _metin = "Seni dinliyorum...";
         _ozelAraclar = eklenenler;
         _yuklendi = true;
       });
-      _otomatikDinlemeBaslat();
+
+      // Ekran açıldığında takılmayı önleyen 350ms güvenli başlatma
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted && !_sessizMod) {
+          _dinlemeBaslat();
+        }
+      });
     }
   }
 
   // ============================================================
-  // SESLİ DİNLEME & SESSİZ MOD GEÇİŞİ
+  // TAKILMAYAN KESİN DİNLEME VE SESSİZ MOD FONKSİYONLARI
   // ============================================================
-  void _otomatikDinlemeBaslat() async {
+  Future<void> _dinlemeBaslat() async {
     if (_sessizMod || _konusuyor) return;
 
     try {
-      bool available = await _speech.initialize(
-        onStatus: (status) {
-          if (mounted) {
-            setState(() {
-              _dinliyor = (status == 'listening');
-            });
-          }
-        },
-        onError: (_) {
-          if (mounted) setState(() => _dinliyor = false);
-        },
-      );
+      if (!_isSpeechInitialized) {
+        _isSpeechInitialized = await _speech.initialize(
+          onStatus: (status) {
+            if (mounted) {
+              setState(() {
+                _dinliyor = (status == 'listening');
+              });
+              // Eğer mikrofon kendiliğinden kapandıysa ve kullanıcı sessizde değilse tekrar dinle
+              if ((status == 'notListening' || status == 'done') && !_sessizMod && !_konusuyor) {
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  if (mounted && !_sessizMod && !_konusuyor && !_dinliyor) {
+                    _dinlemeBaslat();
+                  }
+                });
+              }
+            }
+          },
+          onError: (errorNotification) {
+            if (mounted) {
+              setState(() => _dinliyor = false);
+              // Hata durumunda kısa bir süre sonra yeniden başlatmayı dene
+              if (!_sessizMod && !_konusuyor) {
+                Future.delayed(const Duration(milliseconds: 600), () {
+                  if (mounted && !_sessizMod && !_konusuyor) {
+                    _dinlemeBaslat();
+                  }
+                });
+              }
+            }
+          },
+        );
+      }
 
-      if (available && !_sessizMod && !_konusuyor) {
+      if (_isSpeechInitialized && !_sessizMod && !_konusuyor && !_speech.isListening) {
         if (mounted) setState(() => _dinliyor = true);
-        _speech.listen(
+        await _speech.listen(
+          localeId: "tr_TR",
+          listenMode: stt.ListenMode.confirmation,
           onResult: (result) {
-            if (result.finalResult) {
+            if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
               _cevapVer(result.recognizedWords);
             }
           },
@@ -206,7 +247,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // MİKROFONA BASILDIĞINDA: KONUŞMA MODU <-> SESSİZ MOD
+  // MİKROFONA BASILDIĞINDA SESSİZ MOD <-> KONUŞMA MODU GEÇİŞİ
   void _mikrofonaDokunuldu() async {
     if (_sessizMod) {
       // Sessiz moddan çık -> Sesli Konuşma Modu Aktif
@@ -214,9 +255,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _sessizMod = false;
         _metin = "Seni dinliyorum...";
       });
-      _otomatikDinlemeBaslat();
+      await _dinlemeBaslat();
     } else {
-      // Sessiz moda geç -> Kafe/Toplu Alan Modu (Sadece Yazı)
+      // Sessiz moda geç (Kafe modu: Mikrofon ve ses tamamen kapanır)
       await _speech.stop();
       await _tts.stop();
       setState(() {
@@ -506,7 +547,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // EKRAN YERLEŞİMİ (ÇİFT SPEKTRUM KALDIRILDI - MİKROFON MERKEZLENDİ)
+  // EKRAN YERLEŞİMİ (MİKROFON, METİN VE BUTONLAR)
   // ============================================================
   @override
   Widget build(BuildContext context) {
@@ -524,7 +565,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. ARKA PLAN GÖRSELİ (Kendi orijinal spektrumu korunuyor)
+          // 1. ARKA PLAN GÖRSELİ
           Positioned.fill(
             child: Image.asset(
               _bgImage,
@@ -607,7 +648,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 6. ORTA PANEL: MİKROFON BUTONU (TAM MERKEZ VE SESSİZ MOD)
+          // 6. ORTA PANEL: MİKROFON BUTONU (TAM MERKEZ HALKA VE SESSİZ MOD KONTROLÜ)
           Positioned(
             left: screenWidth * 0.608,
             bottom: screenHeight * 0.082,
@@ -621,7 +662,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 children: [
                   Container(color: Colors.transparent),
 
-                  // Dinleme anında mikrofonun etrafını saran halka
+                  // Dinleme anında mikrofonun etrafını saran tam merkezli halka
                   if (_dinliyor && !_sessizMod)
                     AnimatedBuilder(
                       animation: _pulseController,
@@ -640,7 +681,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       },
                     ),
 
-                  // Sessiz mod aktifken mikrofon üzerine gelen kırmızı sessiz rozeti
+                  // Sessiz moddayken kırmızı sessiz mikrofon rozeti
                   if (_sessizMod)
                     Container(
                       padding: const EdgeInsets.all(4),
@@ -659,7 +700,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 7. ORTA PANEL: MAVİ ALAN (GEREKSİZ 2. ÇİZİM KALDIRILDI / SADECE YAZI VARKEN GÖNDER OKU GÖZÜKÜR)
+          // 7. ORTA PANEL: MAVİ BUTON (YAZI VARKEN GÖNDER OKU, YOKKEN DOKUNMATİK BUTON)
           Positioned(
             left: screenWidth * 0.665,
             bottom: screenHeight * 0.082,
@@ -677,7 +718,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               child: Container(
                 color: Colors.transparent,
                 alignment: Alignment.center,
-                // Sadece kullanıcı klavyeden yazı yazdığında mavi alan üzerine yukarı ok gelir
                 child: _yaziVar
                     ? Container(
                         width: 38,
@@ -692,7 +732,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           size: 22,
                         ),
                       )
-                    : null, // Yazı yokken arka plandaki orijinal mavi spektrum temiz şekilde görünür
+                    : null,
               ),
             ),
           ),
