@@ -7,7 +7,7 @@ import 'sohbet_ekrani.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ARES JARVIS Arayüzü İçin Yatay Ekran ve Tam Ekran Kilitlemesi
+  // ARES JARVIS Arayüzü İçin Yatay Ekran Kilitlemesi
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
