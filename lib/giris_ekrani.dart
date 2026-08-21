@@ -67,7 +67,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
       backgroundColor: Colors.black,
       body: Center(
         child: AspectRatio(
-          aspectRatio: 16 / 9, // Hem telefon hem tablette tam oran koruma
+          aspectRatio: 16 / 9,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final w = constraints.maxWidth;
@@ -84,12 +84,12 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 2. SOL KARAKTER SEÇİM ALANI (KADIN ARES PARLAYAN ÇERÇEVE)
+                  // 2. SOL KARAKTER SEÇİMİ (KADIN ARES YUVARLAK PORTRE ALANI)
                   Positioned(
-                    left: w * 0.145,
-                    top: h * 0.140,
-                    width: w * 0.245,
-                    height: h * 0.335,
+                    left: w * 0.155,
+                    top: h * 0.145,
+                    width: w * 0.140,
+                    height: h * 0.320,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
@@ -98,16 +98,16 @@ class _GirisEkraniState extends State<GirisEkrani> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
+                          shape: BoxShape.circle,
                           border: _secilenKarakter == 'KADIN'
-                              ? Border.all(color: Colors.cyanAccent, width: 2.5)
-                              : Border.all(color: Colors.transparent, width: 2.5),
+                              ? Border.all(color: Colors.cyanAccent, width: 3.5)
+                              : Border.all(color: Colors.transparent, width: 3.5),
                           boxShadow: _secilenKarakter == 'KADIN'
                               ? [
                                   BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.4),
-                                    blurRadius: 16,
-                                    spreadRadius: 2,
+                                    color: Colors.cyanAccent.withOpacity(0.6),
+                                    blurRadius: 20,
+                                    spreadRadius: 3,
                                   )
                                 ]
                               : [],
@@ -116,12 +116,12 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 3. SAĞ KARAKTER SEÇİM ALANI (ERKEK ARES PARLAYAN ÇERÇEVE)
+                  // 3. SAĞ KARAKTER SEÇİMİ (ERKEK ARES YUVARLAK PORTRE ALANI)
                   Positioned(
-                    right: w * 0.145,
-                    top: h * 0.140,
-                    width: w * 0.245,
-                    height: h * 0.335,
+                    right: w * 0.155,
+                    top: h * 0.145,
+                    width: w * 0.140,
+                    height: h * 0.320,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
@@ -130,16 +130,16 @@ class _GirisEkraniState extends State<GirisEkrani> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
+                          shape: BoxShape.circle,
                           border: _secilenKarakter == 'ERKEK'
-                              ? Border.all(color: Colors.cyanAccent, width: 2.5)
-                              : Border.all(color: Colors.transparent, width: 2.5),
+                              ? Border.all(color: Colors.cyanAccent, width: 3.5)
+                              : Border.all(color: Colors.transparent, width: 3.5),
                           boxShadow: _secilenKarakter == 'ERKEK'
                               ? [
                                   BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.4),
-                                    blurRadius: 16,
-                                    spreadRadius: 2,
+                                    color: Colors.cyanAccent.withOpacity(0.6),
+                                    blurRadius: 20,
+                                    spreadRadius: 3,
                                   )
                                 ]
                               : [],
@@ -150,10 +150,10 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
                   // 4. KULLANICI ADI GİRİŞ KUTUSU
                   Positioned(
-                    left: w * 0.450,
-                    top: h * 0.560,
-                    width: w * 0.280,
-                    height: h * 0.090,
+                    left: w * 0.445,
+                    top: h * 0.555,
+                    width: w * 0.285,
+                    height: h * 0.095,
                     child: Center(
                       child: TextField(
                         controller: _kullaniciAdiController,
@@ -183,7 +183,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
                   // 5. DEVAM ET BUTONU
                   Positioned(
-                    bottom: h * 0.105,
+                    bottom: h * 0.100,
                     left: 0,
                     right: 0,
                     child: Center(
