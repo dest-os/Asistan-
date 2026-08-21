@@ -51,7 +51,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            "Ares'in sizi duyabilmesi ve iletişim kurabilmesi için mikrofon izni gereklidir.",
+            "Ares'in sizi duyabilmesi için mikrofon izni gereklidir.",
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red.shade900,
@@ -84,89 +84,75 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
 
-                  // 2. SOL KARAKTER SEÇİM ALANI (KADIN ARES)
+                  // 2. SOL KARAKTER SEÇİM ALANI (KADIN ARES PARLAYAN ÇERÇEVE)
                   Positioned(
-                    left: w * 0.040,
-                    top: h * 0.120,
-                    width: w * 0.310,
-                    height: h * 0.380,
+                    left: w * 0.145,
+                    top: h * 0.140,
+                    width: w * 0.245,
+                    height: h * 0.335,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
                         setState(() => _secilenKarakter = 'KADIN');
                       },
-                      child: Stack(
-                        children: [
-                          Container(color: Colors.transparent),
-                          if (_secilenKarakter == 'KADIN')
-                            Positioned(
-                              right: w * 0.022,
-                              bottom: h * 0.038,
-                              width: 22,
-                              height: 22,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.cyanAccent,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.cyanAccent.withOpacity(0.8),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          border: _secilenKarakter == 'KADIN'
+                              ? Border.all(color: Colors.cyanAccent, width: 2.5)
+                              : Border.all(color: Colors.transparent, width: 2.5),
+                          boxShadow: _secilenKarakter == 'KADIN'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.cyanAccent.withOpacity(0.4),
+                                    blurRadius: 16,
+                                    spreadRadius: 2,
+                                  )
+                                ]
+                              : [],
+                        ),
                       ),
                     ),
                   ),
 
-                  // 3. SAĞ KARAKTER SEÇİM ALANI (ERKEK ARES)
+                  // 3. SAĞ KARAKTER SEÇİM ALANI (ERKEK ARES PARLAYAN ÇERÇEVE)
                   Positioned(
-                    right: w * 0.040,
-                    top: h * 0.120,
-                    width: w * 0.310,
-                    height: h * 0.380,
+                    right: w * 0.145,
+                    top: h * 0.140,
+                    width: w * 0.245,
+                    height: h * 0.335,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onTap: () {
                         setState(() => _secilenKarakter = 'ERKEK');
                       },
-                      child: Stack(
-                        children: [
-                          Container(color: Colors.transparent),
-                          if (_secilenKarakter == 'ERKEK')
-                            Positioned(
-                              left: w * 0.022,
-                              bottom: h * 0.038,
-                              width: 22,
-                              height: 22,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.cyanAccent,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.cyanAccent.withOpacity(0.8),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          border: _secilenKarakter == 'ERKEK'
+                              ? Border.all(color: Colors.cyanAccent, width: 2.5)
+                              : Border.all(color: Colors.transparent, width: 2.5),
+                          boxShadow: _secilenKarakter == 'ERKEK'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.cyanAccent.withOpacity(0.4),
+                                    blurRadius: 16,
+                                    spreadRadius: 2,
+                                  )
+                                ]
+                              : [],
+                        ),
                       ),
                     ),
                   ),
 
                   // 4. KULLANICI ADI GİRİŞ KUTUSU
                   Positioned(
-                    left: w * 0.425,
-                    top: h * 0.565,
-                    width: w * 0.335,
+                    left: w * 0.450,
+                    top: h * 0.560,
+                    width: w * 0.280,
                     height: h * 0.090,
                     child: Center(
                       child: TextField(
@@ -197,7 +183,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
 
                   // 5. DEVAM ET BUTONU
                   Positioned(
-                    bottom: h * 0.120,
+                    bottom: h * 0.105,
                     left: 0,
                     right: 0,
                     child: Center(
