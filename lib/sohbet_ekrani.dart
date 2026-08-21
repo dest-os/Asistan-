@@ -16,17 +16,20 @@ class SohbetEkrani extends StatefulWidget {
 class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMixin {
   String _bgImage = 'assets/erkek_ares_ekrani.png';
   String _kullaniciAdi = 'İbrahim';
+  String _karakter = 'ERKEK';
   bool _yuklendi = false;
 
   late stt.SpeechToText _speech;
   late FlutterTts _tts;
   final ImagePicker _picker = ImagePicker();
+  final TextEditingController _textController = TextEditingController();
 
-  String _metin = "Seni dinliyorum...";
+  String _metin = "Merhaba İbrahim, senin için ne yapabilirim?";
   bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
 
+  List<String> _ozelAraclar = [];
   late AnimationController _waveController;
 
   @override
@@ -34,25 +37,38 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     super.initState();
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
-    
+
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat();
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
 
     _yukle();
   }
 
+  @override
+  void dispose() {
+    _waveController.dispose();
+    _textController.dispose();
+    _speech.stop();
+    _tts.stop();
+    super.dispose();
+  }
+
+  // ==========================================
+  // SES AYARLARI (ERKEK / KADIN SESİ DÜZELTME)
+  // ==========================================
   Future<void> _sesAyarla(String karakter) async {
     await _tts.setLanguage("tr-TR");
-    
-    // Kadın sesini tamamen yok eden kalın erkek bas frekansı
+
     if (karakter == 'ERKEK') {
-      await _tts.setPitch(0.55); // Derin Erkek/Derin Robot Tonu
-      await _tts.setSpeechRate(0.42);
+      // Erkek tonu için kalın bas frekansı ve ritim
+      await _tts.setPitch(0.55);
+      await _tts.setSpeechRate(0.45);
     } else {
-      await _tts.setPitch(1.2);
-      await _tts.setSpeechRate(0.5);
+      // Kadın tonu için doğal kadın frekansı
+      await _tts.setPitch(1.10);
+      await _tts.setSpeechRate(0.50);
     }
 
     try {
@@ -61,11 +77,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         if (voice is Map) {
           String name = voice["name"].toString().toLowerCase();
           String locale = voice["locale"].toString().toLowerCase();
-          
-          if (locale.contains("tr") && karakter == 'ERKEK') {
-            if (name.contains("male") || name.contains("erkek") || name.contains("tr-x")) {
-              await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
-              break;
+
+          if (locale.contains("tr")) {
+            if (karakter == 'ERKEK') {
+              // Erkek ses motoru yakalama
+              if (name.contains("male") || name.contains("erkek") || name.contains("tr-x-c") || name.contains("tr-tr-x-cfz")) {
+                await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+                break;
+              }
+            } else {
+              // Kadın ses motoru yakalama
+              if (name.contains("female") || name.contains("kadin") || name.contains("tr-x-d") || name.contains("tr-tr-x-dfz")) {
+                await _tts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+                break;
+              }
             }
           }
         }
@@ -88,25 +113,22 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     });
   }
 
-  @override
-  void dispose() {
-    _waveController.dispose();
-    _speech.stop();
-    _tts.stop();
-    super.dispose();
-  }
-
   Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
-    String secim = prefs.getString('secilen_karakter') ?? 'ERKEK';
+    _karakter = prefs.getString('secilen_karakter') ?? 'ERKEK';
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
+    List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
 
-    await _sesAyarla(secim);
+    await _sesAyarla(_karakter);
 
     if (mounted) {
       setState(() {
-        _bgImage = (secim == 'KADIN') ? 'assets/kadin_ares_ekrani.png' : 'assets/erkek_ares_ekrani.png';
+        _bgImage = (_karakter == 'KADIN')
+            ? 'assets/kadin_ares_ekrani.png'
+            : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
+        _metin = "Merhaba $_kullaniciAdi, senin için ne yapabilirim?";
+        _ozelAraclar = eklenenler;
         _yuklendi = true;
       });
       _otomatikDinlemeBaslat();
@@ -146,20 +168,17 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   void _cevapVer(String girdi) async {
-    await _speech.stop();
-    if (mounted) {
-      setState(() {
-        _dinliyor = false;
-        _konusuyor = true;
-        _metin = "Düşünüyor...";
-      });
-    }
+    if (girdi.trim().isEmpty || _konusuyor) return;
 
-    String cevap = "Merhaba $_kullaniciAdi, ben Ares.";
+    await _speech.stop();
+
+    String cevap = "Merhaba $_kullaniciAdi, sizi dinledim. Ares sistemi devrede.";
 
     if (mounted) {
       setState(() {
         _metin = cevap;
+        _konusuyor = !_sessizMod;
+        _dinliyor = false;
       });
     }
 
@@ -170,69 +189,234 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // SİBERPUNK TEMALI + MENÜSÜ
-  void _artibutonIslevi() {
+  void _sessizModDegistir() async {
+    setState(() {
+      _sessizMod = !_sessizMod;
+    });
+
+    if (_sessizMod) {
+      await _speech.stop();
+      await _tts.stop();
+      setState(() {
+        _dinliyor = false;
+        _konusuyor = false;
+        _metin = "Sessiz Mod Aktif (Sadece Yazı)";
+      });
+    } else {
+      setState(() => _metin = "Seni dinliyorum...");
+      _otomatikDinlemeBaslat();
+    }
+  }
+
+  // ==========================================
+  // SİBERPUNK + MENÜSÜ (DRAWER SHEET)
+  // ==========================================
+  void _artiMenusuAc() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D0E15).withOpacity(0.95),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.cyan.withOpacity(0.5), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.cyan.withOpacity(0.2),
-                blurRadius: 15,
-                spreadRadius: 2,
-              )
-            ],
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.40,
+          maxChildSize: 0.92,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0B10).withOpacity(0.96),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: Colors.cyan.withOpacity(0.6), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyan.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 45,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.cyan.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        _kategoriBasligi("GÖRSEL & KAMERA ALGILAMA"),
+                        _listeOgesi(
+                          icon: Icons.remove_red_eye,
+                          baslik: 'Canlı Algıla (Kamera Modu)',
+                          altBaslik: 'Ortamı ve nesneleri anlık incelet',
+                          onTap: _fotografCek,
+                        ),
+                        _listeOgesi(
+                          icon: Icons.photo_library,
+                          baslik: 'Fotoğraf & Galeri',
+                          altBaslik: 'Kamera veya galeriden görsel yükle',
+                          onTap: _galeridenSec,
+                        ),
+                        _listeOgesi(
+                          icon: Icons.document_scanner,
+                          baslik: 'OCR (Görsel Metin Taraması)',
+                          altBaslik: 'Kitap, tabela veya belgedeki yazıları okut',
+                          onTap: _fotografCek,
+                        ),
+
+                        _kategoriBasligi("MESAJLAŞMA & SOSYAL MEDYA"),
+                        _listeOgesi(
+                          icon: Icons.chat,
+                          baslik: 'WhatsApp & Mesajlaşma',
+                          altBaslik: 'Sohbet geçmişi yedeği veya ses kaydı yükle',
+                          onTap: () => setState(() => _metin = "WhatsApp verisi aktarımı bekleniyor..."),
+                        ),
+                        _listeOgesi(
+                          icon: Icons.push_pin,
+                          baslik: 'Pinterest & İlham Panoları',
+                          altBaslik: 'Pano veya görsel linki analiz ettir',
+                          onTap: () => setState(() => _metin = "Pinterest panosu inceleniyor..."),
+                        ),
+                        _listeOgesi(
+                          icon: Icons.share,
+                          baslik: 'Facebook & Instagram',
+                          altBaslik: 'Gönderi, yorum dizisi veya paylaşım incele',
+                          onTap: () => setState(() => _metin = "Sosyal medya linki bekleniyor..."),
+                        ),
+                        _listeOgesi(
+                          icon: Icons.video_library,
+                          baslik: 'YouTube & TikTok',
+                          altBaslik: 'Video bağlantısı verip özet al',
+                          onTap: () => setState(() => _metin = "Video bağlantısı bekleniyor..."),
+                        ),
+
+                        _kategoriBasligi("BULUT & DOSYA DEPOLAMA"),
+                        _listeOgesi(
+                          icon: Icons.cloud_queue,
+                          baslik: 'Bulut Depolama Servisleri',
+                          altBaslik: 'Google Drive, OneDrive, Dropbox, iCloud...',
+                          onTap: _bulutServisiSec,
+                        ),
+                        _listeOgesi(
+                          icon: Icons.insert_drive_file,
+                          baslik: 'Belge & Doküman',
+                          altBaslik: 'PDF, Word, TXT ve sözleşme dosyaları',
+                          onTap: _dosyaSec,
+                        ),
+
+                        _kategoriBasligi("3D, YAZILIM & PROJE DOSYALARI"),
+                        _listeOgesi(
+                          icon: Icons.view_in_ar,
+                          baslik: '3D & CAD Modelleri',
+                          altBaslik: 'SKP, DAE, STL, OBJ dosyaları yükle',
+                          onTap: _dosyaSec,
+                        ),
+                        _listeOgesi(
+                          icon: Icons.code,
+                          baslik: 'Kod & Proje Deposu',
+                          altBaslik: 'Dart, Python, ZIP veya GitHub bağlantısı',
+                          onTap: _dosyaSec,
+                        ),
+
+                        _kategoriBasligi("İŞ & ÜRETKENLİK"),
+                        _listeOgesi(
+                          icon: Icons.graphic_eq,
+                          baslik: 'Ses & Müzik Dosyası',
+                          altBaslik: 'Ses kaydını metne dök ve özetlet',
+                          onTap: _dosyaSec,
+                        ),
+                        _listeOgesi(
+                          icon: Icons.content_paste,
+                          baslik: 'Panodan Yapıştır',
+                          altBaslik: 'Kopyalanan metni/kodu hızlıca aktar',
+                          onTap: () => setState(() => _metin = "Panodaki içerik aktarıldı."),
+                        ),
+
+                        if (_ozelAraclar.isNotEmpty) ...[
+                          _kategoriBasligi("ÖZEL EKLENEN ARAÇLAR"),
+                          ..._ozelAraclar.map((arac) => _listeOgesi(
+                                icon: Icons.extension,
+                                baslik: arac,
+                                altBaslik: 'Kullanıcı tanımlı özel araç',
+                                onTap: () => setState(() => _metin = "$arac çalıştırıldı."),
+                              )),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _kategoriBasligi(String baslik) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 6, left: 8),
+      child: Text(
+        baslik,
+        style: const TextStyle(
+          color: Colors.cyan,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _listeOgesi({
+    required IconData icon,
+    required String baslik,
+    required String altBaslik,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.cyan.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.cyan, size: 22),
+      ),
+      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+      subtitle: Text(altBaslik, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+    );
+  }
+
+  void _bulutServisiSec() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF0F111A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.cyan, width: 1.2),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          title: const Text('Bulut Servisi Seçin', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _eklemeSecenegi(
-                icon: Icons.image_search_rounded,
-                label: "Galeri",
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                    if (image != null && mounted) {
-                      setState(() => _metin = "Görsel seçildi: ${image.name}");
-                    }
-                  } catch (_) {}
-                },
-              ),
-              _eklemeSecenegi(
-                icon: Icons.camera_enhance_rounded,
-                label: "Kamera",
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-                    if (photo != null && mounted) {
-                      setState(() => _metin = "Fotoğraf çekildi.");
-                    }
-                  } catch (_) {}
-                },
-              ),
-              _eklemeSecenegi(
-                icon: Icons.folder_zip_rounded,
-                label: "Dosya",
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    FilePickerResult? result = await FilePicker.platform.pickFiles();
-                    if (result != null && mounted) {
-                      setState(() => _metin = "Dosya yüklendi: ${result.files.single.name}");
-                    }
-                  } catch (_) {}
-                },
-              ),
+              _bulutOgesi(icon: Icons.add_to_drive, baslik: 'Google Drive'),
+              _bulutOgesi(icon: Icons.cloud_outlined, baslik: 'Microsoft OneDrive'),
+              _bulutOgesi(icon: Icons.folder_zip_outlined, baslik: 'Dropbox'),
+              _bulutOgesi(icon: Icons.apple, baslik: 'iCloud Drive'),
             ],
           ),
         );
@@ -240,28 +424,35 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  Widget _eklemeSecenegi({required IconData icon, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black,
-              border: Border.all(color: Colors.cyan, width: 1.5),
-            ),
-            child: Icon(icon, color: Colors.cyan, size: 26),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-        ],
-      ),
+  Widget _bulutOgesi({required IconData icon, required String baslik}) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.cyan),
+      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      onTap: () {
+        Navigator.pop(context);
+        _dosyaSec();
+      },
     );
   }
 
+  Future<void> _fotografCek() async {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo != null) setState(() => _metin = "Görsel alındı, inceleniyor...");
+  }
+
+  Future<void> _galeridenSec() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) setState(() => _metin = "Görsel galeriden yüklendi: ${image.name}");
+  }
+
+  Future<void> _dosyaSec() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null) setState(() => _metin = "Dosya yüklendi: ${result.files.first.name}");
+  }
+
+  // ==========================================
+  // EKRAN YERLEŞİMİ (TASARIMA BİREBİR OTURTMA)
+  // ==========================================
   @override
   Widget build(BuildContext context) {
     if (!_yuklendi) {
@@ -271,19 +462,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       );
     }
 
-    double micLeft = MediaQuery.of(context).size.width * 0.612;
-    double micBottom = MediaQuery.of(context).size.height * 0.115;
-    double micWidth = 46;
-    double micHeight = 46;
-
-    double plusLeft = MediaQuery.of(context).size.width * 0.278;
-    double plusBottom = MediaQuery.of(context).size.height * 0.115;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ARKA PLAN GÖRSELİ
+          // 1. ARKA PLAN GÖRSELİ
           Positioned.fill(
             child: Image.asset(
               _bgImage,
@@ -292,96 +478,170 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // YAZI ALANI
+          // 2. ORTA ANA SOHBET YAZI ALANI
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.27,
-            right: MediaQuery.of(context).size.width * 0.31,
-            top: MediaQuery.of(context).size.height * 0.36,
-            height: 100,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                _metin,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+            left: screenWidth * 0.28,
+            right: screenWidth * 0.29,
+            top: screenHeight * 0.28,
+            bottom: screenHeight * 0.24,
+            child: Center(
+              child: SingleChildScrollView(
+                child: Text(
+                  _metin,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.3,
+                    height: 1.4,
+                  ),
+                ),
               ),
             ),
           ),
 
-          // + (ARTI) BUTONU ISLEVI
+          // 3. SOL PANEL ARAMA KUTUSU TIKLAMA ALANI
           Positioned(
-            left: plusLeft,
-            bottom: plusBottom,
-            width: micWidth,
-            height: micHeight,
+            left: screenWidth * 0.028,
+            bottom: screenHeight * 0.082,
+            width: screenWidth * 0.178,
+            height: screenHeight * 0.075,
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _artibutonIslevi,
+              behavior: HitTestBehavior.translucent,
+              onTap: () => setState(() => _metin = "Arama paneli açıldı..."),
               child: Container(color: Colors.transparent),
             ),
           ),
 
-          // MİKROFON VE ANİMASYON KATMANI
+          // 4. ORTA PANEL: "+" BUTONU ALANI
           Positioned(
-            left: micLeft,
-            bottom: micBottom,
-            width: micWidth,
-            height: micHeight,
+            left: screenWidth * 0.262,
+            bottom: screenHeight * 0.080,
+            width: screenWidth * 0.045,
+            height: screenHeight * 0.075,
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+              behavior: HitTestBehavior.translucent,
+              onTap: _artiMenusuAc,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+
+          // 5. ORTA PANEL: "Herhangi bir şey sor" YAZI GİRİŞ ALANI
+          Positioned(
+            left: screenWidth * 0.315,
+            bottom: screenHeight * 0.080,
+            width: screenWidth * 0.285,
+            height: screenHeight * 0.075,
+            child: Center(
+              child: TextField(
+                controller: _textController,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '', // Arka plan görselinde zaten yazıyor
+                ),
+                onSubmitted: (text) {
+                  if (text.trim().isNotEmpty) {
+                    _cevapVer(text);
+                    _textController.clear();
+                  }
+                },
+              ),
+            ),
+          ),
+
+          // 6. ORTA PANEL: MİKROFON BUTONU (DİNLEME BAŞLAT / BİTİR)
+          Positioned(
+            left: screenWidth * 0.608,
+            bottom: screenHeight * 0.080,
+            width: screenWidth * 0.045,
+            height: screenHeight * 0.075,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
               onTap: () {
-                if (!_dinliyor && !_konusuyor) {
+                if (_dinliyor) {
+                  _speech.stop();
+                  setState(() => _dinliyor = false);
+                } else {
                   _otomatikDinlemeBaslat();
                 }
               },
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(color: Colors.transparent),
-                  
-                  if (_dinliyor || _konusuyor)
-                    AnimatedBuilder(
-                      animation: _waveController,
-                      builder: (context, child) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: micWidth + (_waveController.value * 18),
-                              height: micHeight + (_waveController.value * 18),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+
+          // 7. ORTA PANEL: MAVİ SES DALGASI BUTONU (SESSİZ MOD / SESLİ YANIT)
+          Positioned(
+            left: screenWidth * 0.665,
+            bottom: screenHeight * 0.080,
+            width: screenWidth * 0.050,
+            height: screenHeight * 0.075,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _sessizModDegistir,
+              child: Container(
+                color: Colors.transparent,
+                child: (_konusuyor || _dinliyor)
+                    ? AnimatedBuilder(
+                        animation: _waveController,
+                        builder: (context, child) {
+                          return Center(
+                            child: Container(
+                              width: 40 + (_waveController.value * 8),
+                              height: 40 + (_waveController.value * 8),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.cyan.withOpacity((1 - _waveController.value).clamp(0.0, 1.0)),
-                                  width: 2.5,
+                                  width: 2,
                                 ),
                               ),
                             ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: List.generate(3, (i) {
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                  width: 3,
-                                  height: 10 + (sin((_waveController.value * 2 * pi) + (i * 0.8)).abs() * 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.cyan,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                ],
+                          );
+                        },
+                      )
+                    : null,
               ),
+            ),
+          ),
+
+          // 8. SAĞ PANEL: DİSKET / KAYDET BUTONU ALANI
+          Positioned(
+            left: screenWidth * 0.772,
+            bottom: screenHeight * 0.082,
+            width: screenWidth * 0.190,
+            height: screenHeight * 0.075,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                setState(() => _metin = "Sohbet ve veriler başarıyla kaydedildi.");
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+
+          // 9. ÜST PANEL: MENÜ (SOL) VE YENİLE/SOHBET (SAĞ) BUTONLARI
+          Positioned(
+            left: screenWidth * 0.245,
+            top: screenHeight * 0.055,
+            width: screenWidth * 0.040,
+            height: screenHeight * 0.050,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => setState(() => _metin = "Ana menü seçildi."),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Positioned(
+            left: screenWidth * 0.690,
+            top: screenHeight * 0.055,
+            width: screenWidth * 0.040,
+            height: screenHeight * 0.050,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => setState(() => _metin = "Yeni sohbet başlatıldı."),
+              child: Container(color: Colors.transparent),
             ),
           ),
         ],
