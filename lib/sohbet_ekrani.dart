@@ -51,6 +51,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   List<String> _ozelAraclar = [];
   List<Map<String, dynamic>> _kayitliApiler = [];
   List<Map<String, dynamic>> _dinamikOzelModuller = [];
+  Map<String, String> _apiDurumlari = {}; // "google": "AKTIF", "nvidia": "SURE_DOLDU" vb.
 
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
@@ -59,6 +60,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   // 📚 DÜNYADAKİ YAPAY ZEKALAR KATALOĞU
   // ============================================================
   final List<Map<String, String>> _hazirKatalog = [
+    {
+      "id": "nvidia",
+      "firma": "NVIDIA NIM (Llama 3.1 & Nemotron)",
+      "kategori": "1 YIL ÜCRETSİZ / GÜÇLÜ OMURGA",
+      "adres": "https://integrate.api.nvidia.com",
+      "uzmanlik": "Kodlama, Taktiksel Analiz, Yazılım, Mantık",
+      "link": "https://build.nvidia.com"
+    },
     {
       "id": "google",
       "firma": "Google Gemini (1.5 Flash / Pro)",
@@ -82,14 +91,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       "adres": "https://api-inference.huggingface.co",
       "uzmanlik": "Açık Kaynak Modeller, NLP, Çeviri",
       "link": "https://huggingface.co/settings/tokens"
-    },
-    {
-      "id": "nvidia",
-      "firma": "NVIDIA NIM (Llama 3.1 & Nemotron)",
-      "kategori": "SÜRE SINIRLI / ÜCRETSİZ KREDİ",
-      "adres": "https://integrate.api.nvidia.com",
-      "uzmanlik": "Kodlama, Taktiksel Analiz, Yazılım, Matematik",
-      "link": "https://build.nvidia.com"
     },
     {
       "id": "openai",
@@ -325,8 +326,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     String f = firmaAdi.toLowerCase();
     for (var api in _kayitliApiler) {
       String kayitli = (api["firma"] ?? "").toString().toLowerCase();
-      if (f.contains("google") && (kayitli.contains("google") || kayitli.contains("gemini"))) return true;
       if (f.contains("nvidia") && (kayitli.contains("nvidia") || kayitli.contains("llama"))) return true;
+      if (f.contains("google") && (kayitli.contains("google") || kayitli.contains("gemini"))) return true;
       if (f.contains("openai") && kayitli.contains("openai")) return true;
       if (f.contains("groq") && kayitli.contains("groq")) return true;
       if (f.contains("anthropic") && (kayitli.contains("anthropic") || kayitli.contains("claude"))) return true;
@@ -341,147 +342,194 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🏛️ YAPAY ZEKA KONSEYİ & HAKEM SİSTEMİ (GÜÇLENDİRİLMİŞ)
+  // 🏛️ YAPAY ZEKA KONSEYİ & KESİNTİSİZ FAILOVER MOTORU
   // ============================================================
-  Future<String> _googleGeminiCagrisi(String apiKey, String soru) async {
-    final cleanKey = apiKey.trim();
-    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
 
-    String sistemPrompt = "Sen ARES adlı üst düzey yapay zeka asistanısın. "
-        "Kullanıcı adı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
-        "Kullanıcının Türkçe sorularına zeki, doğrudan, profesyonel ve saygılı cevap ver.";
-
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({
-        "contents": [
-          {
-            "role": "user",
-            "parts": [
-              {"text": "$sistemPrompt\n\nKullanıcı Sorusı: $soru"}
-            ]
-          }
-        ],
-        "generationConfig": {
-          "temperature": 0.6,
-          "maxOutputTokens": 800,
-        }
-      }),
-    ).timeout(const Duration(seconds: 14));
-
-    if (response.statusCode == 200) {
-      final data = json.decode(utf8.decode(response.bodyBytes));
-      return data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ?? "";
-    } else {
-      throw Exception("Google HTTP ${response.statusCode}");
-    }
-  }
-
-  Future<String> _nvidiaLlamaCagrisi(String apiKey, String soru) async {
+  // 1. NVIDIA NIM ÇAĞRISI (1 Yıl Ücretsiz / Güçlü Omurga)
+  Future<String?> _nvidiaLlamaCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
 
-    String sistemPrompt = "Sen ARES sisteminin stratejik yapay zekasısın. "
-        "Kullanıcı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
-        "Kullanıcının sorusunu teknik ve mantıksal açıdan analiz edip doğrudan Türkçe yanıt üret.";
+    String sistemPrompt = "Sen ARES sisteminin yüksek zekalı stratejik ve teknik yapay zekasısın. "
+        "Kullanıcı adı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcının sorusuna doğrudan, akıcı, zeki ve eksiksiz Türkçe yanıt ver.";
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $cleanKey",
-      },
-      body: json.encode({
-        "model": "meta/llama-3.1-70b-instruct",
-        "messages": [
-          {"role": "system", "content": sistemPrompt},
-          {"role": "user", "content": soru}
-        ],
-        "temperature": 0.5,
-        "max_tokens": 800,
-      }),
-    ).timeout(const Duration(seconds: 14));
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $cleanKey",
+        },
+        body: json.encode({
+          "model": "meta/llama-3.1-70b-instruct",
+          "messages": [
+            {"role": "system", "content": sistemPrompt},
+            {"role": "user", "content": soru}
+          ],
+          "temperature": 0.6,
+          "max_tokens": 1000,
+        }),
+      ).timeout(const Duration(seconds: 14));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(utf8.decode(response.bodyBytes));
-      return data["choices"]?[0]?["message"]?["content"] ?? "";
-    } else {
-      throw Exception("Nvidia HTTP ${response.statusCode}");
+      if (response.statusCode == 200) {
+        _apiDurumlari["nvidia"] = "AKTIF";
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data["choices"]?[0]?["message"]?["content"]?.toString().trim();
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        _apiDurumlari["nvidia"] = "GECERSIZ_ANAHTAR";
+        return null;
+      } else if (response.statusCode == 429) {
+        _apiDurumlari["nvidia"] = "SURE_VEYA_KOTA_DOLDU";
+        return null;
+      } else {
+        _apiDurumlari["nvidia"] = "HATA_${response.statusCode}";
+        return null;
+      }
+    } catch (_) {
+      _apiDurumlari["nvidia"] = "BAGLANTI_HATASI";
+      return null;
     }
   }
 
-  // Akıllı ve Genişletilmiş Selamlaşma / Hızlı Yanıtlayıcı
+  // 2. GOOGLE GEMINI ÇAĞRISI (Geniş Kota / Çok Yönlü Zeka)
+  Future<String?> _googleGeminiCagrisi(String apiKey, String soru) async {
+    final cleanKey = apiKey.trim();
+    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
+
+    String sistemPrompt = "Sen ARES adlı siberpunk yapay zeka asistanısın. "
+        "Kullanıcı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcının sorularına net, doğrudan, profesyonel Türkçe cevap ver.";
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          "contents": [
+            {
+              "parts": [
+                {"text": "$sistemPrompt\n\nKullanıcı Sorusı: $soru"}
+              ]
+            }
+          ],
+          "generationConfig": {
+            "temperature": 0.6,
+            "maxOutputTokens": 1000,
+          }
+        }),
+      ).timeout(const Duration(seconds: 14));
+
+      if (response.statusCode == 200) {
+        _apiDurumlari["google"] = "AKTIF";
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.toString().trim();
+      } else if (response.statusCode == 400 || response.statusCode == 403) {
+        _apiDurumlari["google"] = "GECERSIZ_ANAHTAR";
+        return null;
+      } else if (response.statusCode == 429) {
+        _apiDurumlari["google"] = "SURE_VEYA_KOTA_DOLDU";
+        return null;
+      } else {
+        _apiDurumlari["google"] = "HATA_${response.statusCode}";
+        return null;
+      }
+    } catch (_) {
+      _apiDurumlari["google"] = "BAGLANTI_HATASI";
+      return null;
+    }
+  }
+
+  // ============================================================
+  // 🎙️ AKILLI SELAMLAŞMA & EMİR BEKLEME MOTORU
+  // ============================================================
   String? _temelSelamlasmaMi(String soru) {
     String s = soru.toLowerCase().trim();
 
-    if (s.contains("merhaba") || s.contains("selam") || s.contains("hey ares") || s.contains("günaydın") || s.contains("iyi günler") || s.contains("iyi akşamlar")) {
-      return "Merhaba $_kullaniciAdi $_hitapSekli. Tüm sistemlerim aktif ve sizi dinliyorum. Nasıl yardımcı olabilirim?";
+    // "Merhaba Ares", "Ares", "Selam Ares" gibi hitaplarda anında hazır durum mesajı
+    if (s == "merhaba ares" || s == "merhaba" || s == "selam ares" || s == "selam" || s == "hey ares" || s == "ares") {
+      return "Merhaba $_kullaniciAdi $_hitapSekli, sistemlerim aktif ve sizi dinliyorum. Sizin için ne yapabilirim?";
     }
-    if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu") || s.contains("ne yapıyorsun")) {
-      return "Teşekkür ederim $_hitapSekli, çekirdek modüllerim ve yapay zekâ konseyim tam kapasiteyle devrede. Emrinizdeyim.";
+    if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu")) {
+      return "Teşekkür ederim $_hitapSekli, çekirdek modüllerim ve yapay zekâ konseyim tam kapasiteyle devrede. Sizin için ne yapabilirim?";
     }
-    if (s == "ares" || s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("ares beni duyuyor musun")) {
-      return "Buradayım ve sizi dinliyorum $_kullaniciAdi $_hitapSekli. Sizi dinliyorum.";
+    if (s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("beni duyuyor musun")) {
+      return "Buradayım ve emrinizdeyim $_kullaniciAdi $_hitapSekli. Sizi dinliyorum, sizin için ne yapabilirim?";
     }
-    if (s.contains("saat kaç") || s.contains("zaman nedir")) {
+    if (s.contains("saat kaç")) {
       final now = DateTime.now();
-      return "Şu an saat ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $_hitapSekli.";
+      return "Şu an saat ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $_hitapSekli. Başka bir emriniz var mı?";
     }
     if (s.contains("kimsin") || s.contains("sen kimsin") || s.contains("adın ne")) {
-      return "Ben ARES, sizin için özelleştirilmiş siberpunk yapay zekâ asistanıyım $_hitapSekli.";
+      return "Ben ARES, sizin için özelleştirilmiş siberpunk yapay zekâ asistanıyım $_hitapSekli. Sizin için ne yapabilirim?";
     }
     return null;
   }
 
   Future<String> _konseyVeHakemIleCevapla(String soru) async {
-    // 1. Önce Hızlı Selamlaşma Kontrolü
+    // 1. Önce Hızlı Selamlaşma / Uyanma Kontrolü (Dış API'ye gitmeden anında yanıt)
     String? hizliCevap = _temelSelamlasmaMi(soru);
     if (hizliCevap != null) return hizliCevap;
 
     // 2. Havuz Kontrolü
     if (_kayitliApiler.isEmpty) {
-      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol üstteki menüden Yapay Zeka Havuzu'na girip Google veya Nvidia anahtarınızı ekleyin.";
+      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol üstteki Ayarlar menüsünden Yapay Zeka Havuzu'na girip NVIDIA veya Google anahtarınızı ekleyin.";
     }
 
-    String? googleKey;
     String? nvidiaKey;
+    String? googleKey;
 
     for (var api in _kayitliApiler) {
       String firma = (api["firma"] ?? "").toString().toLowerCase();
-      if (firma.contains("google") || firma.contains("gemini")) {
-        googleKey = api["anahtar"];
-      } else if (firma.contains("nvidia") || firma.contains("llama")) {
+      if (firma.contains("nvidia") || firma.contains("llama")) {
         nvidiaKey = api["anahtar"];
+      } else if (firma.contains("google") || firma.contains("gemini")) {
+        googleKey = api["anahtar"];
       }
     }
 
-    if (googleKey == null && _kayitliApiler.isNotEmpty) {
-      googleKey = _kayitliApiler.first["anahtar"];
-    }
+    // 3. Konsey Paralel Çağrısı ve Akıllı Failover
+    String? nvidiaSonuc;
+    String? googleSonuc;
 
-    String googleYaniti = "";
-    String nvidiaYaniti = "";
-
-    List<Future> cagrilari = [];
-    if (googleKey != null && googleKey.isNotEmpty) {
-      cagrilari.add(_googleGeminiCagrisi(googleKey, soru).then((res) => googleYaniti = res).catchError((_) => ""));
-    }
+    List<Future> gorevler = [];
     if (nvidiaKey != null && nvidiaKey.isNotEmpty) {
-      cagrilari.add(_nvidiaLlamaCagrisi(nvidiaKey, soru).then((res) => nvidiaYaniti = res).catchError((_) => ""));
+      gorevler.add(_nvidiaLlamaCagrisi(nvidiaKey, soru).then((res) => nvidiaSonuc = res));
+    }
+    if (googleKey != null && googleKey.isNotEmpty) {
+      gorevler.add(_googleGeminiCagrisi(googleKey, soru).then((res) => googleSonuc = res));
     }
 
-    await Future.wait(cagrilari);
+    await Future.wait(gorevler);
 
-    if (googleYaniti.trim().isNotEmpty && nvidiaYaniti.trim().isNotEmpty) {
-      return googleYaniti.length >= nvidiaYaniti.length ? googleYaniti.trim() : nvidiaYaniti.trim();
-    } else if (googleYaniti.trim().isNotEmpty) {
-      return googleYaniti.trim();
-    } else if (nvidiaYaniti.trim().isNotEmpty) {
-      return nvidiaYaniti.trim();
+    // Başarılı Yanıtı Seçme
+    if (nvidiaSonuc != null && nvidiaSonuc!.isNotEmpty && googleSonuc != null && googleSonuc!.isNotEmpty) {
+      return nvidiaSonuc!.length >= googleSonuc!.length ? nvidiaSonuc! : googleSonuc!;
+    } else if (nvidiaSonuc != null && nvidiaSonuc!.isNotEmpty) {
+      return nvidiaSonuc!;
+    } else if (googleSonuc != null && googleSonuc!.isNotEmpty) {
+      return googleSonuc!;
     }
 
-    return "Efendim, yapay zeka sunucularına bağlanırken bir sorun oluştu. Lütfen API anahtarınızın geçerliliğini ve internet bağlantınızı kontrol edin.";
+    // 4. Eğer tüm API'ler hata verdiyse kullanıcıya açıklayıcı teşhis koy
+    String hataRaporu = "";
+    if (_apiDurumlari["nvidia"] == "SURE_VEYA_KOTA_DOLDU") {
+      hataRaporu += "NVIDIA API süresi/kotası dolmuş. ";
+    } else if (_apiDurumlari["nvidia"] == "GECERSIZ_ANAHTAR") {
+      hataRaporu += "NVIDIA anahtarı geçersiz. ";
+    }
+
+    if (_apiDurumlari["google"] == "SURE_VEYA_KOTA_DOLDU") {
+      hataRaporu += "Google Gemini kotası dolmuş. ";
+    } else if (_apiDurumlari["google"] == "GECERSIZ_ANAHTAR") {
+      hataRaporu += "Google anahtarı geçersiz. ";
+    }
+
+    if (hataRaporu.isNotEmpty) {
+      return "Efendim, $hataRaporu Lütfen Yapay Zeka Havuzu'ndan anahtarınızı yenileyiniz.";
+    }
+
+    return "Efendim, yapay zeka sunucularına bağlanırken internet veya bağlantı hatası oluştu. Lütfen bağlantınızı kontrol ediniz.";
   }
 
   // ============================================================
@@ -568,7 +616,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           onResult: (result) {
             if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
               String recognized = result.recognizedWords.trim();
-              // Anlamsız 1-2 harflik fısıltıları filtrele
               if (recognized.length >= 3) {
                 _cevapVer(recognized);
               }
@@ -658,7 +705,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     final TextEditingController anahtarCtrl = TextEditingController();
     final TextEditingController uzmanlikCtrl = TextEditingController();
 
-    String seciliWebLink = "https://aistudio.google.com/app/apikey";
+    String seciliWebLink = "https://build.nvidia.com";
 
     showDialog(
       context: context,
@@ -696,7 +743,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               ),
                             ],
                           ),
-                          // [X] Kapatma Butonu - Doğrudan dialogContext ile Anında Kapatır
                           IconButton(
                             icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
                             onPressed: () => Navigator.pop(dialogContext),
@@ -709,7 +755,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // SOL: HAZIR KATALOG (KAYITLI OLANLARDA YEŞİL ROZET ÇIKAR)
+                            // SOL: HAZIR KATALOG (KAYITLI VE DURUM ROZETLİ)
                             Expanded(
                               flex: 4,
                               child: Column(
@@ -727,6 +773,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                       itemBuilder: (context, index) {
                                         final item = _hazirKatalog[index];
                                         final bool kayitli = _apiKayitliMi(item["firma"]!);
+                                        String? durum = _apiDurumlari[item["id"]];
 
                                         return Container(
                                           margin: const EdgeInsets.only(bottom: 8),
@@ -734,7 +781,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                             color: kayitli ? const Color(0xFF07241E) : const Color(0xFF0C1424),
                                             borderRadius: BorderRadius.circular(12),
                                             border: Border.all(
-                                              color: kayitli ? Colors.greenAccent : const Color(0xFF1B3B5F),
+                                              color: (durum == "SURE_VEYA_KOTA_DOLDU" || durum == "GECERSIZ_ANAHTAR")
+                                                  ? Colors.amberAccent
+                                                  : (kayitli ? Colors.greenAccent : const Color(0xFF1B3B5F)),
                                               width: kayitli ? 1.6 : 1.0,
                                             ),
                                           ),
@@ -748,7 +797,17 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                                   ),
                                                 ),
-                                                if (kayitli)
+                                                if (kayitli && (durum == "SURE_VEYA_KOTA_DOLDU" || durum == "GECERSIZ_ANAHTAR"))
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.amberAccent.withOpacity(0.2),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: Colors.amberAccent, width: 0.8),
+                                                    ),
+                                                    child: const Text("⚠️ YENİLE", style: TextStyle(color: Colors.amberAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                                                  )
+                                                else if (kayitli)
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                     decoration: BoxDecoration(
@@ -860,13 +919,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                         "tarih": DateTime.now().toIso8601String(),
                                       };
 
+                                      // Eğer aynı firma varsa eskisini güncelle, yoksa ekle
+                                      _kayitliApiler.removeWhere((a) => a["firma"] == firmaCtrl.text.trim());
                                       _kayitliApiler.add(yeniApi);
+
                                       final prefs = await SharedPreferences.getInstance();
                                       await prefs.setString('kayitli_api_havuzu', json.encode(_kayitliApiler));
 
                                       setState(() {});
                                       if (!mounted) return;
-                                      Navigator.pop(dialogContext); // 💾 Kesin olarak kapatır!
+                                      Navigator.pop(dialogContext);
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1043,7 +1105,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
                                 setState(() {});
                                 if (!mounted) return;
-                                Navigator.pop(dialogContext); // 💾 Kesin olarak kapatır!
+                                Navigator.pop(dialogContext);
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1181,7 +1243,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             // 3. YAPAY ZEKA HAVUZU BUTONU
                             _siberpunk3dButon(
                               baslik: "🌐 YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
-                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Tanımlı (Hazır Kataloglu)",
+                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Tanımlı (NVIDIA & Google Destekli)",
                               icon: Icons.hub_rounded,
                               vurgulu: true,
                               onTap: () {
@@ -2226,7 +2288,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               behavior: HitTestBehavior.translucent,
               onTap: () {
                 _textController.clear();
-                setState(() => _metin = "Merhaba $_kullaniciAdi $_hitapSekli, yeni sohbet başladı.");
+                setState(() => _metin = "Merhaba $_kullaniciAdi $_hitapSekli, yeni sohbet başladı. Sizin için ne yapabilirim?");
               },
               child: Container(color: Colors.transparent),
             ),
