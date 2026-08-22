@@ -38,7 +38,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _textController = TextEditingController();
 
-  String _metin = "Seni dinliyorum...";
+  String _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
   bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
@@ -47,11 +47,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   double _sesSeviyesi = 0.0;
   bool _isSpeechInitialized = false;
 
-  DateTime? _sonCevapZamani;
   List<String> _ozelAraclar = [];
   List<Map<String, dynamic>> _kayitliApiler = [];
   List<Map<String, dynamic>> _dinamikOzelModuller = [];
-  Map<String, String> _apiDurumlari = {};
+  final Map<String, String> _apiDurumlari = {};
 
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
@@ -238,6 +237,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           _isProcessing = false;
         });
 
+        // Konuşma bittikten sonra sessiz modda değilse mikrofonu nazikçe aç
         if (!_sessizMod) {
           Future.delayed(const Duration(milliseconds: 600), () {
             if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
@@ -261,7 +261,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
     _karakter = prefs.getString('secilen_karakter') ?? 'ERKEK';
-    
+
     // Güvenli İsim Temizleme (Hafızada kod kalıntısı varsa temizle)
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
     if (kayitliIsim.contains("import") || kayitliIsim.contains("dart:") || kayitliIsim.length > 20) {
@@ -307,15 +307,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ? 'assets/kadin_ares_ekrani.png'
             : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
-        _metin = "Seni dinliyorum $_hitapSekli...";
+        _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
         _ozelAraclar = eklenenler;
         _yuklendi = true;
-      });
-
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && !_sessizMod) {
-          _dinlemeBaslat();
-        }
       });
     }
   }
@@ -355,10 +349,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🏛️ YAPAY ZEKA KONSEYİ & KESİNTİSİZ FAILOVER MOTORU
+  // 🏛️ YAPAY ZEKA ÇAĞRILARI & FAILOVER
   // ============================================================
 
-  // 1. NVIDIA NIM ÇAĞRISI (1 Yıl Ücretsiz / Güçlü Omurga)
+  // 1. NVIDIA NIM ÇAĞRISI (Llama 3.1 70B Instruct)
   Future<String?> _nvidiaLlamaCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
@@ -405,7 +399,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // 2. GOOGLE GEMINI ÇAĞRISI (Geniş Kota / Çok Yönlü Zeka)
+  // 2. GOOGLE GEMINI ÇAĞRISI
   Future<String?> _googleGeminiCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
@@ -454,19 +448,18 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🎙️ AKILLI SELAMLAŞMA & EMİR BEKLEME MOTORU (SADE VE NET)
+  // 🎙️ DİYALOG VE SELAMLAŞMA AYIKLAMA (DIŞ API'YE GİTMEZ)
   // ============================================================
-  String? _temelSelamlasmaMi(String soru) {
-    String s = soru.toLowerCase().trim();
+  String? _yerelSelamlasmaMi(String soru) {
+    String s = soru.toLowerCase().replaceAll(RegExp(r'[^\w\sğüşıöçĞÜŞİÖÇ]'), '').trim();
 
-    // "Merhaba Ares", "Ares", "Selam Ares" gibi hitaplarda doğrudan sade ve profesyonel yanıt
-    if (s.contains("merhaba ares") || s == "merhaba" || s.contains("selam ares") || s == "selam" || s == "ares" || s.contains("hey ares")) {
+    if (s.contains("merhaba") || s.contains("selam") || s.contains("ares") || s.contains("hey ares") || s == "ares") {
       return "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
     }
-    if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu")) {
-      return "Teşekkür ederim $_hitapSekli, tüm modüllerim ve yapay zekâ konseyim tam kapasite devrede. Sizin için ne yapabilirim?";
+    if (s.contains("nasılsın") || s.contains("durumun") || s.contains("sistem durumu")) {
+      return "Teşekkür ederim $_hitapSekli, tüm modüllerim ve konseyim devrede. Sizin için ne yapabilirim?";
     }
-    if (s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("beni duyuyor musun")) {
+    if (s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("beni duyuyor")) {
       return "Buradayım ve emrinizdeyim $_hitapSekli. Sizin için ne yapabilirim?";
     }
     if (s.contains("saat kaç")) {
@@ -479,12 +472,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return null;
   }
 
-  Future<String> _konseyVeHakemIleCevapla(String soru) async {
-    // 1. Önce Hızlı Selamlaşma / Uyanma Kontrolü (Dış API'ye gitmeden anında yanıt)
-    String? hizliCevap = _temelSelamlasmaMi(soru);
-    if (hizliCevap != null) return hizliCevap;
-
-    // 2. Havuz Kontrolü
+  Future<String> _soruyuYapayZekayaSor(String soru) async {
     if (_kayitliApiler.isEmpty) {
       return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol üstteki Ayarlar menüsünden Yapay Zeka Havuzu'na girip NVIDIA veya Google anahtarınızı ekleyin.";
     }
@@ -501,7 +489,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     }
 
-    // 3. Konsey Paralel Çağrısı ve Akıllı Failover
     String? nvidiaSonuc;
     String? googleSonuc;
 
@@ -515,7 +502,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     await Future.wait(gorevler);
 
-    // Başarılı Yanıtı Seçme
     if (nvidiaSonuc != null && nvidiaSonuc!.isNotEmpty && googleSonuc != null && googleSonuc!.isNotEmpty) {
       return nvidiaSonuc!.length >= googleSonuc!.length ? nvidiaSonuc! : googleSonuc!;
     } else if (nvidiaSonuc != null && nvidiaSonuc!.isNotEmpty) {
@@ -524,7 +510,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       return googleSonuc!;
     }
 
-    // 4. Eğer tüm API'ler hata verdiyse kullanıcıya açıklayıcı teşhis koy
     String hataRaporu = "";
     if (_apiDurumlari["nvidia"] == "SURE_VEYA_KOTA_DOLDU") {
       hataRaporu += "NVIDIA API süresi/kotası dolmuş. ";
@@ -629,6 +614,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           onResult: (result) {
             if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
               String recognized = result.recognizedWords.trim();
+              // Anlamsız ortam fısıltılarını (3 harften kısa) yok say
               if (recognized.length >= 3) {
                 _cevapVer(recognized);
               }
@@ -646,7 +632,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       setState(() {
         _sessizMod = false;
         _isProcessing = false;
-        _metin = "Seni dinliyorum $_hitapSekli...";
+        _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
       });
       await _dinlemeBaslat();
     } else {
@@ -663,24 +649,35 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   void _cevapVer(String girdi) async {
-    final now = DateTime.now();
-    if (_sonCevapZamani != null && now.difference(_sonCevapZamani!).inMilliseconds < 1200) {
-      return;
-    }
-    if (girdi.trim().isEmpty || _isProcessing) return;
+    final temizGirdi = girdi.trim();
+    if (temizGirdi.isEmpty || _isProcessing) return;
 
-    if (_sesliSistemKomutuMu(girdi)) return;
+    if (_sesliSistemKomutuMu(temizGirdi)) return;
 
-    _sonCevapZamani = now;
     await _speech.stop();
 
+    // 1. Önce Selamlaşma mı kontrol et (API'ye HİÇ GİTMEZ)
+    String? selamCevabi = _yerelSelamlasmaMi(temizGirdi);
+    if (selamCevabi != null) {
+      setState(() {
+        _metin = selamCevabi;
+        _isProcessing = false;
+        _dinliyor = false;
+      });
+      if (!_sessizMod) {
+        await _tts.speak(selamCevabi);
+      }
+      return;
+    }
+
+    // 2. Selamlaşma değilse gerçek sorudur, Konseye sor
     setState(() {
       _isProcessing = true;
       _dinliyor = false;
       _metin = "Konsey değerlendiriyor $_hitapSekli...";
     });
 
-    String cevap = await _konseyVeHakemIleCevapla(girdi);
+    String cevap = await _soruyuYapayZekayaSor(temizGirdi);
 
     if (mounted) {
       setState(() {
@@ -1145,7 +1142,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ (TAŞMA KORUMALI)
+  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ
   // ============================================================
   void _ayarlarPaneliniAc() {
     showGeneralDialog(
@@ -2058,7 +2055,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 7. ORTA PANEL: CANLI SİBERPUNK SPEKTRUMU / GÖNDER BUTONU
+          // 7. ORTA PANEL: CANLI SPEKTRUM / GÖNDER BUTONU
           Positioned(
             left: screenWidth * 0.665,
             bottom: screenHeight * 0.082,
