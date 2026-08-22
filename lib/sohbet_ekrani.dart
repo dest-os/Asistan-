@@ -51,7 +51,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   List<String> _ozelAraclar = [];
   List<Map<String, dynamic>> _kayitliApiler = [];
   List<Map<String, dynamic>> _dinamikOzelModuller = [];
-  Map<String, String> _apiDurumlari = {}; // "google": "AKTIF", "nvidia": "SURE_DOLDU" vb.
+  Map<String, String> _apiDurumlari = {};
 
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
@@ -261,8 +261,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   Future<void> _yukle() async {
     final prefs = await SharedPreferences.getInstance();
     _karakter = prefs.getString('secilen_karakter') ?? 'ERKEK';
+    
+    // Güvenli İsim Temizleme (Hafızada kod kalıntısı varsa temizle)
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
-    _hitapSekli = prefs.getString('hitap_sekli') ?? 'Efendim';
+    if (kayitliIsim.contains("import") || kayitliIsim.contains("dart:") || kayitliIsim.length > 20) {
+      kayitliIsim = 'İbrahim';
+      await prefs.setString('kullanici_adi', 'İbrahim');
+    }
+
+    String kayitliHitap = prefs.getString('hitap_sekli') ?? 'Efendim';
+    if (kayitliHitap.contains("import") || kayitliHitap.contains("dart:") || kayitliHitap.length > 15) {
+      kayitliHitap = 'Efendim';
+      await prefs.setString('hitap_sekli', 'Efendim');
+    }
+
+    _hitapSekli = kayitliHitap;
     _yaziBoyutu = prefs.getDouble('yazi_boyutu') ?? 22.0;
     _konusmaHizi = prefs.getDouble('konusma_hizi') ?? 0.46;
     _sesTonu = prefs.getDouble('ses_tonu') ?? 0.58;
@@ -351,7 +364,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
 
     String sistemPrompt = "Sen ARES sisteminin yüksek zekalı stratejik ve teknik yapay zekasısın. "
-        "Kullanıcı adı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcıya '$_hitapSekli' diye hitap et. "
         "Kullanıcının sorusuna doğrudan, akıcı, zeki ve eksiksiz Türkçe yanıt ver.";
 
     try {
@@ -398,7 +411,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
 
     String sistemPrompt = "Sen ARES adlı siberpunk yapay zeka asistanısın. "
-        "Kullanıcı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcıya '$_hitapSekli' diye hitap et. "
         "Kullanıcının sorularına net, doğrudan, profesyonel Türkçe cevap ver.";
 
     try {
@@ -441,27 +454,27 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🎙️ AKILLI SELAMLAŞMA & EMİR BEKLEME MOTORU
+  // 🎙️ AKILLI SELAMLAŞMA & EMİR BEKLEME MOTORU (SADE VE NET)
   // ============================================================
   String? _temelSelamlasmaMi(String soru) {
     String s = soru.toLowerCase().trim();
 
-    // "Merhaba Ares", "Ares", "Selam Ares" gibi hitaplarda anında hazır durum mesajı
-    if (s == "merhaba ares" || s == "merhaba" || s == "selam ares" || s == "selam" || s == "hey ares" || s == "ares") {
-      return "Merhaba $_kullaniciAdi $_hitapSekli, sistemlerim aktif ve sizi dinliyorum. Sizin için ne yapabilirim?";
+    // "Merhaba Ares", "Ares", "Selam Ares" gibi hitaplarda doğrudan sade ve profesyonel yanıt
+    if (s.contains("merhaba ares") || s == "merhaba" || s.contains("selam ares") || s == "selam" || s == "ares" || s.contains("hey ares")) {
+      return "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
     }
     if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu")) {
-      return "Teşekkür ederim $_hitapSekli, çekirdek modüllerim ve yapay zekâ konseyim tam kapasiteyle devrede. Sizin için ne yapabilirim?";
+      return "Teşekkür ederim $_hitapSekli, tüm modüllerim ve yapay zekâ konseyim tam kapasite devrede. Sizin için ne yapabilirim?";
     }
     if (s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("beni duyuyor musun")) {
-      return "Buradayım ve emrinizdeyim $_kullaniciAdi $_hitapSekli. Sizi dinliyorum, sizin için ne yapabilirim?";
+      return "Buradayım ve emrinizdeyim $_hitapSekli. Sizin için ne yapabilirim?";
     }
     if (s.contains("saat kaç")) {
       final now = DateTime.now();
-      return "Şu an saat ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $_hitapSekli. Başka bir emriniz var mı?";
+      return "Şu an saat ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $_hitapSekli. Sizin için ne yapabilirim?";
     }
     if (s.contains("kimsin") || s.contains("sen kimsin") || s.contains("adın ne")) {
-      return "Ben ARES, sizin için özelleştirilmiş siberpunk yapay zekâ asistanıyım $_hitapSekli. Sizin için ne yapabilirim?";
+      return "Ben ARES, kişisel siberpunk yapay zekâ asistanınızım $_hitapSekli. Sizin için ne yapabilirim?";
     }
     return null;
   }
@@ -695,7 +708,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🛡️ GÜVENLİ MERKEZİ POP-UP HUD PENCERELERİ (KESİN KAPANIR)
+  // 🛡️ GÜVENLİ MERKEZİ POP-UP HUD PENCERELERİ
   // ============================================================
 
   // 1. YAPAY ZEKA HAVUZU POP-UP'I
@@ -755,14 +768,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // SOL: HAZIR KATALOG (KAYITLI VE DURUM ROZETLİ)
+                            // SOL: HAZIR KATALOG
                             Expanded(
                               flex: 4,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    "📚 HAZIR YAPAY ZEKA LİSTESİ (DOKUN VE OTOMATİK DOLDUR):",
+                                    "📚 HAZIR YAPAY ZEKA LİSTESİ (DOKUN VE DOLDUR):",
                                     style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 8),
@@ -838,7 +851,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const VerticalDivider(color: Colors.white12, width: 24),
 
-                            // SAĞ: DOLDURULAN FORM VE WEB BUTONU
+                            // SAĞ: FORM VE WEB BUTONU
                             Expanded(
                               flex: 5,
                               child: ListView(
@@ -873,7 +886,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // WEB KÖPRÜSÜ BUTONU
+                                  // WEB KÖPRÜSÜ
                                   GestureDetector(
                                     onTap: () async {
                                       try {
@@ -919,7 +932,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                         "tarih": DateTime.now().toIso8601String(),
                                       };
 
-                                      // Eğer aynı firma varsa eskisini güncelle, yoksa ekle
                                       _kayitliApiler.removeWhere((a) => a["firma"] == firmaCtrl.text.trim());
                                       _kayitliApiler.add(yeniApi);
 
@@ -1049,7 +1061,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 16),
 
-                            Text("2. YAZI BOYUTU: ${_yaziBoyutu.toInt()} px (${_yaziBoyutu > 24 ? "Büyük (Yaşlı/Göz Dostu)" : (_yaziBoyutu < 20 ? "Kompakt" : "Standart")})",
+                            Text("2. YAZI BOYUTU: ${_yaziBoyutu.toInt()} px",
                                 style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
                             Slider(
                               value: _yaziBoyutu,
@@ -1133,7 +1145,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ
+  // ⚙️ 3D SİBERPUNK AYARLAR PANELİ (TAŞMA KORUMALI)
   // ============================================================
   void _ayarlarPaneliniAc() {
     showGeneralDialog(
@@ -1165,7 +1177,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       )
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1175,25 +1187,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           const Row(
                             children: [
                               Icon(Icons.settings_suggest_rounded, color: Colors.cyanAccent, size: 20),
-                              SizedBox(width: 10),
+                              SizedBox(width: 8),
                               Text(
-                                "ARES // SİSTEM KONTROL",
+                                "ARES // SİSTEM",
                                 style: TextStyle(
                                   color: Colors.cyanAccent,
-                                  fontSize: 15,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                                  letterSpacing: 1.1,
                                 ),
                               ),
                             ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 26),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
                             onPressed: () => Navigator.pop(panelContext),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       const Divider(color: Colors.white12, thickness: 1),
                       const SizedBox(height: 8),
 
@@ -1201,36 +1213,35 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         child: ListView(
                           physics: const BouncingScrollPhysics(),
                           children: [
-                            // 1. KULLANICI PROFİLİ VE HİTAP
+                            // 1. KULLANICI KİMLİĞİ
                             _siberpunk3dKart(
                               baslik: "KULLANICI KİMLİĞİ & HİTAP",
-                              altBaslik: "Ares'in size nasıl sesleneceğini belirleyin",
+                              altBaslik: "Ares'in seslenme bilgisi",
                               icon: Icons.person_pin_rounded,
                               child: Row(
                                 children: [
                                   Expanded(
-                                    flex: 3,
                                     child: Text(
                                       "$_kullaniciAdi ($_hitapSekli)",
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                   ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: _mini3dButon(
-                                      metin: "DÜZENLE",
-                                      onTap: () => _profilDuzenleModal(setPanelState),
-                                    ),
-                                  )
+                                  const SizedBox(width: 8),
+                                  _mini3dButon(
+                                    metin: "DÜZENLE",
+                                    onTap: () => _profilDuzenleModal(setPanelState),
+                                  ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
-                            // 2. SİSTEM VE KİŞİSELLEŞTİRME BUTONU
+                            // 2. SİSTEM VE KİŞİSELLEŞTİRME
                             _siberpunk3dButon(
-                              baslik: "⚙️ SİSTEM VE KİŞİSELLEŞTİRME",
-                              altBaslik: "Karakter, Yüz, Ses Tonu, Yazı Boyutu & Erişilebilirlik",
+                              baslik: "⚙️ SİSTEM & KİŞİSELLEŞTİRME",
+                              altBaslik: "Karakter, Ses Tonu, Yazı Boyutu",
                               icon: Icons.tune_rounded,
                               vurgulu: true,
                               onTap: () {
@@ -1238,12 +1249,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 _sistemAyarlariPopUpAc();
                               },
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
-                            // 3. YAPAY ZEKA HAVUZU BUTONU
+                            // 3. YAPAY ZEKA HAVUZU
                             _siberpunk3dButon(
-                              baslik: "🌐 YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
-                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Tanımlı (NVIDIA & Google Destekli)",
+                              baslik: "🌐 YAPAY ZEKÂ HAVUZU // API",
+                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Tanımlı (NVIDIA & Google)",
                               icon: Icons.hub_rounded,
                               vurgulu: true,
                               onTap: () {
@@ -1251,12 +1262,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 _apiHavuzuPopUpAc();
                               },
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
                             // 4. ARŞİV DOSYASI
                             _siberpunkDepolamaKart(
                               baslik: "📁 ARŞİV MERKEZİ",
-                              altBaslik: "Geçmiş sohbet ve çıktıların otomatik kasası",
+                              altBaslik: "Sohbet ve çıktıların otomatik kasası",
                               icon: Icons.archive_rounded,
                               mevcutYol: _arsivYolu,
                               onGozat: () async {
@@ -1269,12 +1280,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 }
                               },
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
                             // 5. NOTLAR BÖLÜMÜ
                             _siberpunkDepolamaKart(
                               baslik: "📝 NOTLAR MERKEZİ",
-                              altBaslik: "Kullanıcı fikirleri ve not kağıtları havuzu",
+                              altBaslik: "Fikir ve not havuzu",
                               icon: Icons.edit_note_rounded,
                               mevcutYol: _notlarYolu,
                               onGozat: () async {
@@ -1287,12 +1298,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 }
                               },
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
                             // 6. EĞİTİM MERKEZİ
                             _siberpunkDepolamaKart(
                               baslik: "🎓 EĞİTİM MERKEZİ",
-                              altBaslik: "Yabancı dil ve özel hoca eğitim havuzu",
+                              altBaslik: "Yabancı dil ve hoca havuzu",
                               icon: Icons.school_rounded,
                               mevcutYol: _egitimYolu,
                               onGozat: () async {
@@ -1305,7 +1316,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 }
                               },
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
                             // 7. DİNAMİK EKLENEN ÖZEL MODÜLLER
                             if (_dinamikOzelModuller.isNotEmpty) ...[
@@ -1313,37 +1324,37 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 int idx = entry.key;
                                 var mod = entry.value;
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.only(bottom: 10),
                                   child: Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF0A101D),
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(14),
                                       border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
                                     ),
                                     child: Row(
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
                                             color: Colors.cyanAccent.withOpacity(0.12),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.extension_rounded, color: Colors.cyanAccent, size: 20),
+                                          child: const Icon(Icons.extension_rounded, color: Colors.cyanAccent, size: 18),
                                         ),
-                                        const SizedBox(width: 10),
+                                        const SizedBox(width: 8),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(mod["baslik"] ?? "Özel Modül", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              Text(mod["baslik"] ?? "Özel Modül", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                                               const SizedBox(height: 2),
-                                              Text(mod["aciklama"] ?? "", style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                              Text(mod["aciklama"] ?? "", style: const TextStyle(color: Colors.white54, fontSize: 10)),
                                             ],
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
                                           onPressed: () async {
                                             _dinamikOzelModuller.removeAt(idx);
                                             final prefs = await SharedPreferences.getInstance();
@@ -1363,45 +1374,32 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             GestureDetector(
                               onTap: () => _yeniDinamikModulEkleModal(setPanelState),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.cyanAccent.withOpacity(0.06),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.cyanAccent, width: 1.6),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 10),
-                                  ],
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.cyanAccent, width: 1.5),
                                 ),
                                 alignment: Alignment.center,
                                 child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_circle_outline_rounded, color: Colors.cyanAccent, size: 20),
-                                    SizedBox(width: 8),
+                                    Icon(Icons.add_circle_outline_rounded, color: Colors.cyanAccent, size: 18),
+                                    SizedBox(width: 6),
                                     Text(
                                       "YENİ BUTON & KUTU EKLE",
                                       style: TextStyle(
                                         color: Colors.cyanAccent,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        letterSpacing: 1.2,
+                                        fontSize: 12,
+                                        letterSpacing: 1.0,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 14),
-
-                            // 9. SİSTEM & BELLEK SIFIRLAMA
-                            _siberpunk3dButon(
-                              baslik: "SİSTEM VE BELLEĞİ SIFIRLA",
-                              altBaslik: "Önbelleği temizle veya fabrika ayarlarına dön",
-                              icon: Icons.delete_sweep_rounded,
-                              tehlikeli: true,
-                              onTap: () => Navigator.pop(panelContext),
-                            ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                           ],
                         ),
                       ),
@@ -1492,7 +1490,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // YARDIMCI 3D WIDGET'LAR
+  // YARDIMCI WIDGET'LAR
   // ============================================================
   Widget _siberpunkDepolamaKart({
     required String baslik,
@@ -1505,30 +1503,27 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF0A101D),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1B3B5F), width: 1.5),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFF02050A), offset: Offset(0, 4), blurRadius: 8),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1B3B5F), width: 1.4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.cyanAccent, size: 18),
-              const SizedBox(width: 8),
-              Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.0)),
+              Icon(icon, color: Colors.cyanAccent, size: 16),
+              const SizedBox(width: 6),
+              Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8)),
             ],
           ),
-          const SizedBox(height: 3),
-          Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
+          Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(8),
@@ -1538,12 +1533,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                     mevcutYol,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.cyanAccent, fontSize: 11),
+                    style: const TextStyle(color: Colors.cyanAccent, fontSize: 10),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              _mini3dButon(metin: "KLASÖR SEÇ", onTap: onGozat),
+              const SizedBox(width: 6),
+              _mini3dButon(metin: "SEÇ", onTap: onGozat),
             ],
           ),
         ],
@@ -1553,28 +1548,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Widget _siberpunk3dKart({required String baslik, required String altBaslik, required IconData icon, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF0A101D),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1B3B5F), width: 1.5),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFF02050A), offset: Offset(0, 4), blurRadius: 8),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1B3B5F), width: 1.4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.cyanAccent, size: 18),
-              const SizedBox(width: 8),
-              Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.1)),
+              Icon(icon, color: Colors.cyanAccent, size: 16),
+              const SizedBox(width: 6),
+              Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8)),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 2),
+          Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+          const SizedBox(height: 8),
           child,
         ],
       ),
@@ -1594,38 +1586,34 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: const Color(0xFF0A101D),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: anaRenk.withOpacity(0.6), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.6), offset: const Offset(0, 4), blurRadius: 6),
-            if (vurgulu) BoxShadow(color: Colors.cyanAccent.withOpacity(0.15), blurRadius: 10),
-          ],
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: anaRenk.withOpacity(0.6), width: 1.4),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: anaRenk.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: anaRenk, size: 20),
+              child: Icon(icon, color: anaRenk, size: 18),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.8)),
-                  const SizedBox(height: 2),
-                  Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.6)),
+                  const SizedBox(height: 1),
+                  Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 10)),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, color: anaRenk.withOpacity(0.7), size: 14),
+            Icon(Icons.arrow_forward_ios_rounded, color: anaRenk.withOpacity(0.7), size: 12),
           ],
         ),
       ),
@@ -1644,7 +1632,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             color: aktif ? Colors.cyanAccent : Colors.white12,
             width: aktif ? 2.0 : 1.0,
           ),
-          boxShadow: aktif ? [BoxShadow(color: Colors.cyanAccent.withOpacity(0.4), blurRadius: 10)] : [],
         ),
         alignment: Alignment.center,
         child: Text(
@@ -1653,7 +1640,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             color: aktif ? Colors.cyanAccent : Colors.white54,
             fontWeight: FontWeight.bold,
             fontSize: 12,
-            letterSpacing: 1.1,
           ),
         ),
       ),
@@ -1664,16 +1650,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: const Color(0xFF052136),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.cyanAccent, width: 1.2),
         ),
         alignment: Alignment.center,
         child: Text(
           metin,
-          style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.8),
+          style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 10),
         ),
       ),
     );
@@ -1689,25 +1675,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(baslik, style: const TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-        const SizedBox(height: 6),
+        Text(baslik, style: const TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
             color: const Color(0xFF050811),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFF183B5E), width: 1.4),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: TextField(
             controller: controller,
             obscureText: sifreli,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
             cursorColor: Colors.cyanAccent,
             decoration: InputDecoration(
-              icon: Icon(icon, color: Colors.cyan.withOpacity(0.7), size: 18),
+              icon: Icon(icon, color: Colors.cyan.withOpacity(0.7), size: 16),
               border: InputBorder.none,
               hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+              hintStyle: const TextStyle(color: Colors.white24, fontSize: 11),
             ),
           ),
         ),
@@ -1734,7 +1720,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             mainAxisSize: MainAxisSize.min,
             children: [
               _siberpunkGirisKutusu(baslik: "KULLANICI ADI", hint: "Adınız", controller: nameCtrl, icon: Icons.person),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               _siberpunkGirisKutusu(baslik: "HİTAP ŞEKLİ", hint: "Örn: Efendim, Komutan", controller: hitapCtrl, icon: Icons.record_voice_over),
             ],
           ),
@@ -1787,13 +1773,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 color: const Color(0xFF0A0B10).withOpacity(0.96),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 border: Border.all(color: Colors.cyan.withOpacity(0.6), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.cyan.withOpacity(0.2),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  )
-                ],
               ),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               child: Column(
@@ -1812,113 +1791,27 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       controller: scrollController,
                       children: [
                         _kategoriBasligi("GÖRSEL & KAMERA ALGILAMA"),
-                        _listeOgesi(
-                          icon: Icons.remove_red_eye,
-                          baslik: 'Canlı Algıla (Kamera Modu)',
-                          altBaslik: 'Ortamı ve nesneleri anlık incelet',
-                          onTap: _fotografCek,
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.photo_library,
-                          baslik: 'Fotoğraf & Galeri',
-                          altBaslik: 'Kamera veya galeriden görsel yükle',
-                          onTap: _galeridenSec,
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.document_scanner,
-                          baslik: 'OCR (Görsel Metin Taraması)',
-                          altBaslik: 'Kitap, tabela veya belgedeki yazıları okut',
-                          onTap: _fotografCek,
-                          context: sheetContext,
-                        ),
+                        _listeOgesi(icon: Icons.remove_red_eye, baslik: 'Canlı Algıla (Kamera Modu)', altBaslik: 'Ortamı anlık incelet', onTap: _fotografCek, context: sheetContext),
+                        _listeOgesi(icon: Icons.photo_library, baslik: 'Fotoğraf & Galeri', altBaslik: 'Görsel yükle', onTap: _galeridenSec, context: sheetContext),
+                        _listeOgesi(icon: Icons.document_scanner, baslik: 'OCR (Metin Taraması)', altBaslik: 'Yazıları okut', onTap: _fotografCek, context: sheetContext),
 
                         _kategoriBasligi("MESAJLAŞMA & SOSYAL MEDYA"),
-                        _listeOgesi(
-                          icon: Icons.chat,
-                          baslik: 'WhatsApp & Mesajlaşma',
-                          altBaslik: 'Sohbet geçmişi yedeği veya ses kaydı yükle',
-                          onTap: () => _gonderilecekMesaj("WhatsApp sohbet geçmişi yüklendi, analiz et."),
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.push_pin,
-                          baslik: 'Pinterest & İlham Panoları',
-                          altBaslik: 'Pano veya görsel linki analiz ettir',
-                          onTap: () => _gonderilecekMesaj("Pinterest panosu yüklendi, incele."),
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.share,
-                          baslik: 'Facebook & Instagram',
-                          altBaslik: 'Gönderi veya paylaşım incele',
-                          onTap: () => _gonderilecekMesaj("Sosyal medya gönderisi analize gönderildi."),
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.video_library,
-                          baslik: 'YouTube & TikTok',
-                          altBaslik: 'Video bağlantısı verip özet al',
-                          onTap: () => _gonderilecekMesaj("Video bağlantısı özet için gönderildi."),
-                          context: sheetContext,
-                        ),
+                        _listeOgesi(icon: Icons.chat, baslik: 'WhatsApp & Mesajlaşma', altBaslik: 'Sohbet geçmişi analizi', onTap: () => _gonderilecekMesaj("WhatsApp sohbet geçmişi yüklendi, analiz et."), context: sheetContext),
+                        _listeOgesi(icon: Icons.push_pin, baslik: 'Pinterest Panoları', altBaslik: 'Pano linki incelet', onTap: () => _gonderilecekMesaj("Pinterest panosu yüklendi."), context: sheetContext),
+                        _listeOgesi(icon: Icons.video_library, baslik: 'YouTube & TikTok', altBaslik: 'Video özeti al', onTap: () => _gonderilecekMesaj("Video özeti için link gönderildi."), context: sheetContext),
 
                         _kategoriBasligi("BULUT & DOSYA DEPOLAMA"),
-                        _listeOgesi(
-                          icon: Icons.cloud_queue,
-                          baslik: 'Bulut Depolama Servisleri',
-                          altBaslik: 'Google Drive, OneDrive, Dropbox, iCloud...',
-                          onTap: _bulutServisiSec,
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.insert_drive_file,
-                          baslik: 'Belge & Doküman',
-                          altBaslik: 'PDF, Word, TXT ve sözleşme dosyaları',
-                          onTap: _dosyaSec,
-                          context: sheetContext,
-                        ),
-
-                        _kategoriBasligi("3D, YAZILIM & PROJE DOSYALARI"),
-                        _listeOgesi(
-                          icon: Icons.view_in_ar,
-                          baslik: '3D & CAD Modelleri',
-                          altBaslik: 'SKP, DAE, STL, OBJ dosyaları yükle',
-                          onTap: _dosyaSec,
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.code,
-                          baslik: 'Kod & Proje Deposu',
-                          altBaslik: 'Dart, Python, ZIP veya GitHub bağlantısı',
-                          onTap: _dosyaSec,
-                          context: sheetContext,
-                        ),
-
-                        _kategoriBasligi("İŞ & ÜRETKENLİK"),
-                        _listeOgesi(
-                          icon: Icons.graphic_eq,
-                          baslik: 'Ses & Müzik Dosyası',
-                          altBaslik: 'Ses kaydını metne dök ve özetlet',
-                          onTap: _dosyaSec,
-                          context: sheetContext,
-                        ),
-                        _listeOgesi(
-                          icon: Icons.content_paste,
-                          baslik: 'Panodan Yapıştır',
-                          altBaslik: 'Kopyalanan metni/kodu hızlıca aktar',
-                          onTap: () => _gonderilecekMesaj("Panodaki metin aktarıldı, incelensin."),
-                          context: sheetContext,
-                        ),
+                        _listeOgesi(icon: Icons.cloud_queue, baslik: 'Bulut Servisleri', altBaslik: 'Google Drive, OneDrive...', onTap: _bulutServisiSec, context: sheetContext),
+                        _listeOgesi(icon: Icons.insert_drive_file, baslik: 'Belge & Doküman', altBaslik: 'PDF, Word, TXT', onTap: _dosyaSec, context: sheetContext),
+                        _listeOgesi(icon: Icons.code, baslik: 'Kod & Proje Deposu', altBaslik: 'Dart, Python, ZIP', onTap: _dosyaSec, context: sheetContext),
 
                         if (_ozelAraclar.isNotEmpty) ...[
                           _kategoriBasligi("ÖZEL EKLENEN ARAÇLAR"),
                           ..._ozelAraclar.map((arac) => _listeOgesi(
                                 icon: Icons.extension,
                                 baslik: arac,
-                                altBaslik: 'Kullanıcı tanımlı özel araç',
-                                onTap: () => _gonderilecekMesaj("$arac aracı çalıştırıldı."),
+                                altBaslik: 'Özel araç',
+                                onTap: () => _gonderilecekMesaj("$arac çalıştırıldı."),
                                 context: sheetContext,
                               )),
                         ],
@@ -1936,37 +1829,20 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Widget _kategoriBasligi(String baslik) {
     return Padding(
-      padding: const EdgeInsets.only(top: 14, bottom: 6, left: 8),
+      padding: const EdgeInsets.only(top: 12, bottom: 4, left: 6),
       child: Text(
         baslik,
-        style: const TextStyle(
-          color: Colors.cyan,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+        style: const TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1),
       ),
     );
   }
 
-  Widget _listeOgesi({
-    required IconData icon,
-    required String baslik,
-    required String altBaslik,
-    required VoidCallback onTap,
-    required BuildContext context,
-  }) {
+  Widget _listeOgesi({required IconData icon, required String baslik, required String altBaslik, required VoidCallback onTap, required BuildContext context}) {
     return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.cyan.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: Colors.cyan, size: 22),
-      ),
-      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-      subtitle: Text(altBaslik, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+      dense: true,
+      leading: Icon(icon, color: Colors.cyan, size: 20),
+      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+      subtitle: Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 10)),
       onTap: () {
         Navigator.pop(context);
         onTap();
@@ -1984,14 +1860,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Colors.cyan, width: 1.2),
           ),
-          title: const Text('Bulut Servisi Seçin', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Bulut Servisi Seçin', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _bulutOgesi(icon: Icons.add_to_drive, baslik: 'Google Drive', context: cloudContext),
               _bulutOgesi(icon: Icons.cloud_outlined, baslik: 'Microsoft OneDrive', context: cloudContext),
               _bulutOgesi(icon: Icons.folder_zip_outlined, baslik: 'Dropbox', context: cloudContext),
-              _bulutOgesi(icon: Icons.apple, baslik: 'iCloud Drive', context: cloudContext),
             ],
           ),
         );
@@ -2002,7 +1877,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   Widget _bulutOgesi({required IconData icon, required String baslik, required BuildContext context}) {
     return ListTile(
       leading: Icon(icon, color: Colors.cyan),
-      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 13)),
       onTap: () {
         Navigator.pop(context);
         _dosyaSec();
@@ -2059,7 +1934,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 2. ORTA ANA SOHBET ALANI (DİNAMİK YAZI BOYUTLU)
+          // 2. ORTA ANA SOHBET ALANI
           Positioned(
             left: screenWidth * 0.28,
             right: screenWidth * 0.29,
@@ -2288,7 +2163,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               behavior: HitTestBehavior.translucent,
               onTap: () {
                 _textController.clear();
-                setState(() => _metin = "Merhaba $_kullaniciAdi $_hitapSekli, yeni sohbet başladı. Sizin için ne yapabilirim?");
+                setState(() => _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?");
               },
               child: Container(color: Colors.transparent),
             ),
