@@ -138,7 +138,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         });
 
         if (!_sessizMod) {
-          Future.delayed(const Duration(milliseconds: 500), () {
+          Future.delayed(const Duration(milliseconds: 600), () {
             if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
               _dinlemeBaslat();
             }
@@ -195,7 +195,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _yuklendi = true;
       });
 
-      Future.delayed(const Duration(milliseconds: 600), () {
+      Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && !_sessizMod) {
           _dinlemeBaslat();
         }
@@ -219,105 +219,128 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // GERÇEK YAPAY ZEKA API İLETİŞİM MOTORU (GOOGLE & NVIDIA)
+  // 🏛️ YAPAY ZEKA KONSEYİ VE HAKEM SİSTEMİ (MULTI-AGENT ARBITRATOR)
   // ============================================================
-  Future<String> _yapayZekayaSor(String soru) async {
+  Future<String> _googleGeminiCagrisi(String apiKey, String soru) async {
+    final cleanKey = apiKey.trim();
+    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
+
+    String sistemPrompt = "Sen ARES adlı siberpunk üst düzey yapay zekasın. "
+        "Kullanıcı adı: '$_kullaniciAdi'. Hitap şekli: '$_hitapSekli'. "
+        "ÖNEMLİ KURAL: Kullanıcının konuşma-metin çevirisinde oluşabilecek ses hatalarını "
+        "(örneğin 'gitar' yerine 'GitHub', 'kod' yerine 'kot' gibi) teknik ve mantıksal bağlamına göre otomatik düzelt. "
+        "Türkçe, zeki, doğrudan, net ve profesyonel cevap ver.";
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        "contents": [
+          {
+            "parts": [
+              {"text": "$sistemPrompt\n\nKullanıcı Talebi: $soru"}
+            ]
+          }
+        ],
+        "generationConfig": {
+          "temperature": 0.6,
+          "maxOutputTokens": 600,
+        }
+      }),
+    ).timeout(const Duration(seconds: 12));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      return data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ?? "";
+    } else {
+      throw Exception("Google HTTP ${response.statusCode}: ${response.body}");
+    }
+  }
+
+  Future<String> _nvidiaLlamaCagrisi(String apiKey, String soru) async {
+    final cleanKey = apiKey.trim();
+    final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
+
+    String sistemPrompt = "Sen ARES sisteminin stratejik ve teknik yapay zeka modülüsün. "
+        "Kullanıcı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcının sorusunu teknik açıdan analiz et ve en doğru, öz yanıtı üret.";
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $cleanKey",
+      },
+      body: json.encode({
+        "model": "meta/llama-3.1-70b-instruct",
+        "messages": [
+          {"role": "system", "content": sistemPrompt},
+          {"role": "user", "content": soru}
+        ],
+        "temperature": 0.5,
+        "max_tokens": 600,
+      }),
+    ).timeout(const Duration(seconds: 12));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      return data["choices"]?[0]?["message"]?["content"] ?? "";
+    } else {
+      throw Exception("Nvidia HTTP ${response.statusCode}");
+    }
+  }
+
+  Future<String> _konseyVeHakemIleCevapla(String soru) async {
     if (_kayitliApiler.isEmpty) {
-      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol menüdeki Yapay Zeka Havuzu'ndan Google veya Nvidia API anahtarınızı ekleyin.";
+      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol menüdeki Yapay Zeka Havuzu'ndan Google veya Nvidia anahtarınızı ekleyin.";
     }
 
-    // 1. Önce Google API'sini arayalım
-    Map<String, dynamic>? googleApi;
-    Map<String, dynamic>? nvidiaApi;
+    String? googleKey;
+    String? nvidiaKey;
 
     for (var api in _kayitliApiler) {
       String firma = (api["firma"] ?? "").toString().toLowerCase();
       if (firma.contains("google") || firma.contains("gemini")) {
-        googleApi = api;
-        break;
+        googleKey = api["anahtar"];
+      } else if (firma.contains("nvidia") || firma.contains("llama")) {
+        nvidiaKey = api["anahtar"];
       }
     }
 
-    for (var api in _kayitliApiler) {
-      String firma = (api["firma"] ?? "").toString().toLowerCase();
-      if (firma.contains("nvidia") || firma.contains("llama")) {
-        nvidiaApi = api;
-        break;
-      }
+    // Yedek: Eğer ad eşleşmezse ilk anahtarı Google veya Nvidia kabul et
+    if (googleKey == null && _kayitliApiler.isNotEmpty) {
+      googleKey = _kayitliApiler.first["anahtar"];
     }
 
-    String sistemMesaji = "Sen ARES adında son derece gelişmiş, siberpunk ve fütüristik bir yapay zeka asistanısın. "
-        "Kullanıcının adı '$_kullaniciAdi'. Ona her zaman saygıyla '$_hitapSekli' şeklinde hitap et. "
-        "Yanıtların net, akıcı, Türkçe, zeki ve profesyonel olsun.";
+    String googleYaniti = "";
+    String nvidiaYaniti = "";
 
-    // GOOGLE GEMINI İLE ÇAĞRI
-    if (googleApi != null) {
-      try {
-        String key = (googleApi["anahtar"] ?? "").toString().trim();
-        final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$key");
-
-        final response = await http.post(
-          url,
-          headers: {"Content-Type": "application/json"},
-          body: json.encode({
-            "contents": [
-              {
-                "parts": [
-                  {"text": "$sistemMesaji\n\nKullanıcı: $soru"}
-                ]
-              }
-            ],
-            "generationConfig": {
-              "temperature": 0.7,
-              "maxOutputTokens": 800,
-            }
-          }),
-        ).timeout(const Duration(seconds: 15));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(utf8.decode(response.bodyBytes));
-          String yanit = data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ?? "";
-          if (yanit.trim().isNotEmpty) return yanit.trim();
-        }
-      } catch (_) {}
+    // 1. Konsey Modellerini Paralel Çağır
+    List<Future> cagrilari = [];
+    if (googleKey != null && googleKey.isNotEmpty) {
+      cagrilari.add(_googleGeminiCagrisi(googleKey, soru).then((res) => googleYaniti = res).catchError((_) => ""));
+    }
+    if (nvidiaKey != null && nvidiaKey.isNotEmpty) {
+      cagrilari.add(_nvidiaLlamaCagrisi(nvidiaKey, soru).then((res) => nvidiaYaniti = res).catchError((_) => ""));
     }
 
-    // NVIDIA NIM İLE ÇAĞRI (Eğer Google yoksa veya hata verirse)
-    if (nvidiaApi != null) {
-      try {
-        String key = (nvidiaApi["anahtar"] ?? "").toString().trim();
-        final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
+    await Future.wait(cagrilari);
 
-        final response = await http.post(
-          url,
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $key",
-          },
-          body: json.encode({
-            "model": "meta/llama-3.1-70b-instruct",
-            "messages": [
-              {"role": "system", "content": sistemMesaji},
-              {"role": "user", "content": soru}
-            ],
-            "temperature": 0.6,
-            "max_tokens": 800,
-          }),
-        ).timeout(const Duration(seconds: 15));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(utf8.decode(response.bodyBytes));
-          String yanit = data["choices"]?[0]?["message"]?["content"] ?? "";
-          if (yanit.trim().isNotEmpty) return yanit.trim();
-        }
-      } catch (_) {}
+    // 2. Hakem Karar Mekanizması
+    if (googleYaniti.trim().isNotEmpty && nvidiaYaniti.trim().isNotEmpty) {
+      // İki model de yanıt verdiyse en zengin ve akıcı olanı hakem kararıyla seç
+      return googleYaniti.length >= nvidiaYaniti.length ? googleYaniti.trim() : nvidiaYaniti.trim();
+    } else if (googleYaniti.trim().isNotEmpty) {
+      return googleYaniti.trim();
+    } else if (nvidiaYaniti.trim().isNotEmpty) {
+      return nvidiaYaniti.trim();
     }
 
-    return "Efendim, yapay zeka sunucularına erişirken bir bağlantı hatası oluştu. Lütfen internetinizi ve API anahtarlarınızı kontrol edin.";
+    return "Efendim, yapay zeka sunucularına bağlanırken bir sorun oluştu. Lütfen internet bağlantınızı ve API anahtarlarınızı kontrol edin.";
   }
 
   // ============================================================
-  // DİNLEME VE CEVAP SİSTEMİ (SESLİ + YAZILI MANTIK)
+  // DİNLEME VE CEVAP SİSTEMİ
   // ============================================================
   Future<void> _dinlemeBaslat() async {
     if (_sessizMod || _konusuyor || _isProcessing) return;
@@ -331,7 +354,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 _dinliyor = (status == 'listening');
               });
               if ((status == 'notListening' || status == 'done') && !_sessizMod && !_konusuyor && !_isProcessing) {
-                Future.delayed(const Duration(milliseconds: 400), () {
+                Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted && !_sessizMod && !_konusuyor && !_dinliyor && !_isProcessing) {
                     _dinlemeBaslat();
                   }
@@ -350,6 +373,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         await _speech.listen(
           localeId: "tr_TR",
           listenMode: stt.ListenMode.confirmation,
+          pauseFor: const Duration(seconds: 3), // Cümlenin bitmesini sabırla bekler
           onSoundLevelChange: (level) {
             if (mounted) {
               setState(() {
@@ -403,11 +427,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     setState(() {
       _isProcessing = true;
       _dinliyor = false;
-      _metin = "Ares analiz ediyor $_hitapSekli...";
+      _metin = "Konsey değerlendiriyor $_hitapSekli...";
     });
 
-    // Gerçek Yapay Zekadan Yanıt Al
-    String cevap = await _yapayZekayaSor(girdi);
+    // 🏛️ Konsey ve Hakemden En Mükemmel Cevabı Al
+    String cevap = await _konseyVeHakemIleCevapla(girdi);
 
     if (mounted) {
       setState(() {
@@ -415,7 +439,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       });
     }
 
-    // 🎙️ Mikrofon Aktifse Seslendir, Sessiz Moddaysa Sadece Yazıda Bırak
+    // 🎙️ Mikrofon Aktifse Seslendir, Sessiz Moddaysa Sadece Ekrana Yaz
     if (!_sessizMod) {
       await _tts.speak(cevap);
     } else {
@@ -472,7 +496,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ÜST BAŞLIK & KAPATMA
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -509,7 +532,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       const Divider(color: Colors.white12, thickness: 1),
                       const SizedBox(height: 8),
 
-                      // KAYDIRILABİLİR 3D AYAR BUTONLARI
                       Expanded(
                         child: ListView(
                           physics: const BouncingScrollPhysics(),
@@ -540,7 +562,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 12),
 
-                            // 2. KARAKTER VE SES GEÇİŞİ (İKİLİ 3D SEÇİCİ)
+                            // 2. KARAKTER VE SES GEÇİŞİ
                             _siberpunk3dKart(
                               baslik: "ARES KARAKTER & SES MODELİ",
                               altBaslik: "Aktif arayüz ve ses motorunu anında değiştirin",
@@ -589,7 +611,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             // 4. ARŞİV DOSYASI
                             _siberpunkDepolamaKart(
                               baslik: "📁 ARŞİV MERKEZİ",
-                              altBaslik: "Geçmiş sohbet, proje ve çıktıların otomatik kasası",
+                              altBaslik: "Geçmiş sohbet ve çıktıların otomatik kasası",
                               icon: Icons.archive_rounded,
                               mevcutYol: _arsivYolu,
                               onGozat: () async {
@@ -607,7 +629,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             // 5. NOTLAR BÖLÜMÜ
                             _siberpunkDepolamaKart(
                               baslik: "📝 NOTLAR MERKEZİ",
-                              altBaslik: "Kullanıcı fikirleri ve dijital not kağıtları havuzu",
+                              altBaslik: "Kullanıcı fikirleri ve not kağıtları havuzu",
                               icon: Icons.edit_note_rounded,
                               mevcutYol: _notlarYolu,
                               onGozat: () async {
@@ -625,7 +647,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             // 6. EĞİTİM MERKEZİ
                             _siberpunkDepolamaKart(
                               baslik: "🎓 EĞİTİM MERKEZİ",
-                              altBaslik: "Yabancı dil, uzmanlaşma ve özel hoca materyalleri",
+                              altBaslik: "Yabancı dil ve özel hoca eğitim havuzu",
                               icon: Icons.school_rounded,
                               mevcutYol: _egitimYolu,
                               onGozat: () async {
@@ -640,31 +662,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 12),
 
-                            // 7. KLONLANMIŞ DOĞAL SES ENTEGRASYONU
-                            _siberpunk3dButon(
-                              baslik: "KLONLANMIŞ SES ENTEGRASYONU",
-                              altBaslik: "ElevenLabs / Özel Doğal Ses API'si Bağla",
-                              icon: Icons.graphic_eq_rounded,
-                              onTap: () {
-                                Navigator.pop(context);
-                                _klonSesPaneliniAc();
-                              },
-                            ),
-                            const SizedBox(height: 12),
-
-                            // 8. YAPAY ZEKA İLE SİBERPUNK YÜZ OLUŞTURMA
-                            _siberpunk3dButon(
-                              baslik: "SİBERPUNK YÜZ & AVATAR ÜRETİCİ",
-                              altBaslik: "Kendi fotoğrafından robotik ARES avatarı üret",
-                              icon: Icons.face_retouching_natural_rounded,
-                              onTap: () {
-                                Navigator.pop(context);
-                                _yuzOlusturucuModal();
-                              },
-                            ),
-                            const SizedBox(height: 12),
-
-                            // 9. DİNAMİK EKLENEN ÖZEL KULLANICI MODÜLLERİ
+                            // 7. DİNAMİK EKLENEN ÖZEL MODÜLLER
                             if (_dinamikOzelModuller.isNotEmpty) ...[
                               ..._dinamikOzelModuller.asMap().entries.map((entry) {
                                 int idx = entry.key;
@@ -716,7 +714,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               }),
                             ],
 
-                            // ➕ 10. YENİ BUTON VE KUTU EKLE BUTONU
+                            // ➕ 8. YENİ BUTON VE KUTU EKLE
                             GestureDetector(
                               onTap: () => _yeniDinamikModulEkleModal(setPanelState),
                               child: Container(
@@ -750,7 +748,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 14),
 
-                            // 11. SİSTEM & BELLEK SIFIRLAMA
+                            // 9. SİSTEM & BELLEK SIFIRLAMA
                             _siberpunk3dButon(
                               baslik: "SİSTEM VE BELLEĞİ SIFIRLA",
                               altBaslik: "Önbelleği temizle veya fabrika ayarlarına dön",
@@ -782,9 +780,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  // ============================================================
-  // ➕ YENİ DİNAMİK BUTON VE KUTU EKLEME PENCERESİ
-  // ============================================================
   void _yeniDinamikModulEkleModal(StateSetter setPanelState) {
     final baslikCtrl = TextEditingController();
     final aciklamaCtrl = TextEditingController();
@@ -850,9 +845,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  // ============================================================
-  // 🌐 YAPAY ZEKA HAVUZU // 4 BİLGİ GİRİŞ KUTULU KAYAR MODÜL
-  // ============================================================
   void _apiHavuzuPaneliniAc() {
     final TextEditingController firmaCtrl = TextEditingController();
     final TextEditingController adresCtrl = TextEditingController();
@@ -1197,7 +1189,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 children: [
                   Text(baslik, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.8)),
                   const SizedBox(height: 2),
-                  Text(altBaslik, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                  Text(altBaslik, style: const TextStyle(color: Colors.white54, fontSize: 11)),
                 ],
               ),
             ),
@@ -1343,14 +1335,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  void _klonSesPaneliniAc() {
-    setState(() => _metin = "Klonlanmış ses API modülü açıldı $_hitapSekli.");
-  }
-
-  void _yuzOlusturucuModal() {
-    setState(() => _metin = "Siberpunk avatar oluşturucu modülü devrede $_hitapSekli.");
-  }
-
   // ============================================================
   // SİBERPUNK + MENÜSÜ
   // ============================================================
@@ -1430,7 +1414,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                         _listeOgesi(
                           icon: Icons.share,
                           baslik: 'Facebook & Instagram',
-                          altBaslik: 'Gönderi, yorum dizisi veya paylaşım incele',
+                          altBaslik: 'Gönderi veya paylaşım incele',
                           onTap: () => _gonderilecekMesaj("Sosyal medya gönderisi analize gönderildi."),
                         ),
                         _listeOgesi(
