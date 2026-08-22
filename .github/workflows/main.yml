@@ -25,6 +25,11 @@ jobs:
           flutter-version: '3.19.6'
           channel: 'stable'
 
+      - name: Sabit Imza Anahtari Olustur (Keystore)
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AresAsistan, OU=Ares, O=Ares, L=Istanbul, S=Istanbul, C=TR"
+
       - name: Install Dependencies
         run: flutter pub get
 
