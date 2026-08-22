@@ -48,9 +48,17 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        debug {
+            // Standart sabit debug ve release anahtarı
+        }
+    }
+
     buildTypes {
         release {
             signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
