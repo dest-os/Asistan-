@@ -237,7 +237,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           _isProcessing = false;
         });
 
-        // Konuşma bittiğinde tek bir kez dinlemeyi aç
         if (!_sessizMod) {
           Future.delayed(const Duration(milliseconds: 600), () {
             if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
@@ -342,17 +341,15 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🏛️ YAPAY ZEKA KONSEYİ & HAKEM SİSTEMİ
+  // 🏛️ YAPAY ZEKA KONSEYİ & HAKEM SİSTEMİ (GÜÇLENDİRİLMİŞ)
   // ============================================================
   Future<String> _googleGeminiCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey");
 
-    String sistemPrompt = "Sen ARES adlı siberpunk yapay zeka asistanısın. "
-        "Kullanıcı adı: '$_kullaniciAdi'. Hitap şekli: '$_hitapSekli'. "
-        "ÖNEMLİ: Kullanıcının konuşma-metin çevirisinde oluşabilecek ses algılama hatalarını "
-        "(örneğin 'gitar' yerine 'GitHub', 'kot' yerine 'kod' gibi) cümlenin teknoloji ve yazılım bağlamına göre otomatik düzelt. "
-        "Doğrudan, net, zeki ve saygılı Türkçe cevap ver.";
+    String sistemPrompt = "Sen ARES adlı üst düzey yapay zeka asistanısın. "
+        "Kullanıcı adı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
+        "Kullanıcının Türkçe sorularına zeki, doğrudan, profesyonel ve saygılı cevap ver.";
 
     final response = await http.post(
       url,
@@ -360,6 +357,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       body: json.encode({
         "contents": [
           {
+            "role": "user",
             "parts": [
               {"text": "$sistemPrompt\n\nKullanıcı Sorusı: $soru"}
             ]
@@ -367,10 +365,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         ],
         "generationConfig": {
           "temperature": 0.6,
-          "maxOutputTokens": 600,
+          "maxOutputTokens": 800,
         }
       }),
-    ).timeout(const Duration(seconds: 12));
+    ).timeout(const Duration(seconds: 14));
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
@@ -384,9 +382,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
 
-    String sistemPrompt = "Sen ARES sisteminin stratejik ve teknik yapay zekasısın. "
+    String sistemPrompt = "Sen ARES sisteminin stratejik yapay zekasısın. "
         "Kullanıcı: '$_kullaniciAdi', Hitap: '$_hitapSekli'. "
-        "Kullanıcının sorusunu teknik ve mantıksal açıdan analiz edip en doğru, öz yanıtı üret.";
+        "Kullanıcının sorusunu teknik ve mantıksal açıdan analiz edip doğrudan Türkçe yanıt üret.";
 
     final response = await http.post(
       url,
@@ -401,9 +399,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           {"role": "user", "content": soru}
         ],
         "temperature": 0.5,
-        "max_tokens": 600,
+        "max_tokens": 800,
       }),
-    ).timeout(const Duration(seconds: 12));
+    ).timeout(const Duration(seconds: 14));
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
@@ -413,21 +411,25 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
-  // Akıllı Selamlaşma ve Temel Diyalog Yanıtlayıcı
+  // Akıllı ve Genişletilmiş Selamlaşma / Hızlı Yanıtlayıcı
   String? _temelSelamlasmaMi(String soru) {
     String s = soru.toLowerCase().trim();
-    if (s == "merhaba" || s == "merhaba ares" || s == "selam" || s == "selam ares" || s == "hey ares") {
+
+    if (s.contains("merhaba") || s.contains("selam") || s.contains("hey ares") || s.contains("günaydın") || s.contains("iyi günler") || s.contains("iyi akşamlar")) {
       return "Merhaba $_kullaniciAdi $_hitapSekli. Tüm sistemlerim aktif ve sizi dinliyorum. Nasıl yardımcı olabilirim?";
     }
-    if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu")) {
-      return "Teşekkür ederim $_hitapSekli, çekirdek modüllerim ve yapay zekâ konseyim tam kapasiteyle devrede. Sizin için ne yapmamı istersiniz?";
+    if (s.contains("nasılsın") || s.contains("durumun nedir") || s.contains("sistem durumu") || s.contains("ne yapıyorsun")) {
+      return "Teşekkür ederim $_hitapSekli, çekirdek modüllerim ve yapay zekâ konseyim tam kapasiteyle devrede. Emrinizdeyim.";
     }
-    if (s == "ares" || s == "orada mısın" || s == "dinliyor musun") {
-      return "Buradayım ve sizi dinliyorum $_kullaniciAdi $_hitapSekli. Emrinizdeyim.";
+    if (s == "ares" || s.contains("orada mısın") || s.contains("dinliyor musun") || s.contains("ares beni duyuyor musun")) {
+      return "Buradayım ve sizi dinliyorum $_kullaniciAdi $_hitapSekli. Sizi dinliyorum.";
     }
-    if (s.contains("saat kaç")) {
+    if (s.contains("saat kaç") || s.contains("zaman nedir")) {
       final now = DateTime.now();
       return "Şu an saat ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $_hitapSekli.";
+    }
+    if (s.contains("kimsin") || s.contains("sen kimsin") || s.contains("adın ne")) {
+      return "Ben ARES, sizin için özelleştirilmiş siberpunk yapay zekâ asistanıyım $_hitapSekli.";
     }
     return null;
   }
@@ -439,7 +441,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     // 2. Havuz Kontrolü
     if (_kayitliApiler.isEmpty) {
-      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen Yapay Zeka Havuzu'ndan Google veya Nvidia anahtarınızı ekleyin.";
+      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol üstteki menüden Yapay Zeka Havuzu'na girip Google veya Nvidia anahtarınızı ekleyin.";
     }
 
     String? googleKey;
@@ -479,7 +481,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       return nvidiaYaniti.trim();
     }
 
-    return "Efendim, yapay zeka sunucularına bağlanırken bir sorun oluştu. Lütfen internet bağlantınızı ve API anahtarlarınızı kontrol edin.";
+    return "Efendim, yapay zeka sunucularına bağlanırken bir sorun oluştu. Lütfen API anahtarınızın geçerliliğini ve internet bağlantınızı kontrol edin.";
   }
 
   // ============================================================
@@ -531,7 +533,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     return false;
   }
 
-  // Mikrofon Dinleme (Sürekli Ötme ve Bip Sesi Engellendi)
   Future<void> _dinlemeBaslat() async {
     if (_sessizMod || _konusuyor || _isProcessing) return;
 
@@ -566,7 +567,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           },
           onResult: (result) {
             if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
-              _cevapVer(result.recognizedWords);
+              String recognized = result.recognizedWords.trim();
+              // Anlamsız 1-2 harflik fısıltıları filtrele
+              if (recognized.length >= 3) {
+                _cevapVer(recognized);
+              }
             }
           },
         );
@@ -599,7 +604,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   void _cevapVer(String girdi) async {
     final now = DateTime.now();
-    if (_sonCevapZamani != null && now.difference(_sonCevapZamani!).inMilliseconds < 1500) {
+    if (_sonCevapZamani != null && now.difference(_sonCevapZamani!).inMilliseconds < 1200) {
       return;
     }
     if (girdi.trim().isEmpty || _isProcessing) return;
@@ -643,7 +648,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // 🛡️ GÜVENLİ MERKEZİ POP-UP HUD PENCERELERİ
+  // 🛡️ GÜVENLİ MERKEZİ POP-UP HUD PENCERELERİ (KESİN KAPANIR)
   // ============================================================
 
   // 1. YAPAY ZEKA HAVUZU POP-UP'I
@@ -657,7 +662,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -665,7 +670,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: MediaQuery.of(context).size.width * 0.78,
+                  width: MediaQuery.of(context).size.width * 0.82,
                   height: MediaQuery.of(context).size.height * 0.88,
                   decoration: BoxDecoration(
                     color: const Color(0xFF070B14),
@@ -691,10 +696,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               ),
                             ],
                           ),
-                          // [X] Kapatma Butonu - Kök Navigatör ile Kesin Kapanır
+                          // [X] Kapatma Butonu - Doğrudan dialogContext ile Anında Kapatır
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 26),
-                            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+                            onPressed: () => Navigator.pop(dialogContext),
                           ),
                         ],
                       ),
@@ -809,7 +814,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // FERAH VE OKUNAKLI WEB KÖPRÜSÜ BUTONU
+                                  // WEB KÖPRÜSÜ BUTONU
                                   GestureDetector(
                                     onTap: () async {
                                       try {
@@ -861,7 +866,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
                                       setState(() {});
                                       if (!mounted) return;
-                                      Navigator.of(context, rootNavigator: true).pop();
+                                      Navigator.pop(dialogContext); // 💾 Kesin olarak kapatır!
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -908,7 +913,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   void _sistemAyarlariPopUpAc() {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -916,8 +921,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: MediaQuery.of(context).size.width * 0.65,
-                  height: MediaQuery.of(context).size.height * 0.80,
+                  width: MediaQuery.of(context).size.width * 0.70,
+                  height: MediaQuery.of(context).size.height * 0.82,
                   decoration: BoxDecoration(
                     color: const Color(0xFF070B14),
                     borderRadius: BorderRadius.circular(24),
@@ -943,8 +948,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 26),
-                            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+                            onPressed: () => Navigator.pop(dialogContext),
                           ),
                         ],
                       ),
@@ -1038,7 +1043,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
                                 setState(() {});
                                 if (!mounted) return;
-                                Navigator.of(context, rootNavigator: true).pop();
+                                Navigator.pop(dialogContext); // 💾 Kesin olarak kapatır!
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1075,7 +1080,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       barrierLabel: "Ayarlar",
       barrierColor: Colors.black.withOpacity(0.65),
       transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) {
+      pageBuilder: (panelContext, anim1, anim2) {
         return StatefulBuilder(
           builder: (context, setPanelState) {
             return Align(
@@ -1121,8 +1126,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
-                            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 26),
+                            onPressed: () => Navigator.pop(panelContext),
                           ),
                         ],
                       ),
@@ -1167,7 +1172,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               icon: Icons.tune_rounded,
                               vurgulu: true,
                               onTap: () {
-                                Navigator.of(context, rootNavigator: true).pop();
+                                Navigator.pop(panelContext);
                                 _sistemAyarlariPopUpAc();
                               },
                             ),
@@ -1180,7 +1185,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               icon: Icons.hub_rounded,
                               vurgulu: true,
                               onTap: () {
-                                Navigator.of(context, rootNavigator: true).pop();
+                                Navigator.pop(panelContext);
                                 _apiHavuzuPopUpAc();
                               },
                             ),
@@ -1332,7 +1337,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                               altBaslik: "Önbelleği temizle veya fabrika ayarlarına dön",
                               icon: Icons.delete_sweep_rounded,
                               tehlikeli: true,
-                              onTap: () => Navigator.of(context, rootNavigator: true).pop(),
+                              onTap: () => Navigator.pop(panelContext),
                             ),
                             const SizedBox(height: 20),
                           ],
@@ -1364,8 +1369,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
+      barrierDismissible: true,
+      builder: (modalContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF080D18),
           shape: RoundedRectangleBorder(
@@ -1393,7 +1398,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+              onPressed: () => Navigator.pop(modalContext),
               child: const Text("İPTAL", style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
@@ -1414,7 +1419,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 setPanelState(() {});
                 setState(() {});
                 if (!mounted) return;
-                Navigator.of(context, rootNavigator: true).pop();
+                Navigator.pop(modalContext);
               },
               child: const Text("SİSTEME EKLE", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
             ),
@@ -1654,8 +1659,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
+      barrierDismissible: true,
+      builder: (modalContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF080D18),
           shape: RoundedRectangleBorder(
@@ -1673,7 +1678,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+              onPressed: () => Navigator.pop(modalContext),
               child: const Text("İPTAL", style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
@@ -1691,7 +1696,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                   _hitapSekli = hitapCtrl.text.trim();
                 });
                 if (!mounted) return;
-                Navigator.of(context, rootNavigator: true).pop();
+                Navigator.pop(modalContext);
               },
               child: const Text("KAYDET", style: TextStyle(color: Colors.cyanAccent)),
             ),
@@ -1709,7 +1714,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (sheetContext) {
         return DraggableScrollableSheet(
           initialChildSize: 0.65,
           minChildSize: 0.40,
@@ -1750,18 +1755,21 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           baslik: 'Canlı Algıla (Kamera Modu)',
                           altBaslik: 'Ortamı ve nesneleri anlık incelet',
                           onTap: _fotografCek,
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.photo_library,
                           baslik: 'Fotoğraf & Galeri',
                           altBaslik: 'Kamera veya galeriden görsel yükle',
                           onTap: _galeridenSec,
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.document_scanner,
                           baslik: 'OCR (Görsel Metin Taraması)',
                           altBaslik: 'Kitap, tabela veya belgedeki yazıları okut',
                           onTap: _fotografCek,
+                          context: sheetContext,
                         ),
 
                         _kategoriBasligi("MESAJLAŞMA & SOSYAL MEDYA"),
@@ -1770,24 +1778,28 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           baslik: 'WhatsApp & Mesajlaşma',
                           altBaslik: 'Sohbet geçmişi yedeği veya ses kaydı yükle',
                           onTap: () => _gonderilecekMesaj("WhatsApp sohbet geçmişi yüklendi, analiz et."),
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.push_pin,
                           baslik: 'Pinterest & İlham Panoları',
                           altBaslik: 'Pano veya görsel linki analiz ettir',
                           onTap: () => _gonderilecekMesaj("Pinterest panosu yüklendi, incele."),
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.share,
                           baslik: 'Facebook & Instagram',
                           altBaslik: 'Gönderi veya paylaşım incele',
                           onTap: () => _gonderilecekMesaj("Sosyal medya gönderisi analize gönderildi."),
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.video_library,
                           baslik: 'YouTube & TikTok',
                           altBaslik: 'Video bağlantısı verip özet al',
                           onTap: () => _gonderilecekMesaj("Video bağlantısı özet için gönderildi."),
+                          context: sheetContext,
                         ),
 
                         _kategoriBasligi("BULUT & DOSYA DEPOLAMA"),
@@ -1796,12 +1808,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           baslik: 'Bulut Depolama Servisleri',
                           altBaslik: 'Google Drive, OneDrive, Dropbox, iCloud...',
                           onTap: _bulutServisiSec,
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.insert_drive_file,
                           baslik: 'Belge & Doküman',
                           altBaslik: 'PDF, Word, TXT ve sözleşme dosyaları',
                           onTap: _dosyaSec,
+                          context: sheetContext,
                         ),
 
                         _kategoriBasligi("3D, YAZILIM & PROJE DOSYALARI"),
@@ -1810,12 +1824,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           baslik: '3D & CAD Modelleri',
                           altBaslik: 'SKP, DAE, STL, OBJ dosyaları yükle',
                           onTap: _dosyaSec,
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.code,
                           baslik: 'Kod & Proje Deposu',
                           altBaslik: 'Dart, Python, ZIP veya GitHub bağlantısı',
                           onTap: _dosyaSec,
+                          context: sheetContext,
                         ),
 
                         _kategoriBasligi("İŞ & ÜRETKENLİK"),
@@ -1824,12 +1840,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                           baslik: 'Ses & Müzik Dosyası',
                           altBaslik: 'Ses kaydını metne dök ve özetlet',
                           onTap: _dosyaSec,
+                          context: sheetContext,
                         ),
                         _listeOgesi(
                           icon: Icons.content_paste,
                           baslik: 'Panodan Yapıştır',
                           altBaslik: 'Kopyalanan metni/kodu hızlıca aktar',
                           onTap: () => _gonderilecekMesaj("Panodaki metin aktarıldı, incelensin."),
+                          context: sheetContext,
                         ),
 
                         if (_ozelAraclar.isNotEmpty) ...[
@@ -1839,6 +1857,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                                 baslik: arac,
                                 altBaslik: 'Kullanıcı tanımlı özel araç',
                                 onTap: () => _gonderilecekMesaj("$arac aracı çalıştırıldı."),
+                                context: sheetContext,
                               )),
                         ],
                       ],
@@ -1873,6 +1892,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     required String baslik,
     required String altBaslik,
     required VoidCallback onTap,
+    required BuildContext context,
   }) {
     return ListTile(
       leading: Container(
@@ -1886,7 +1906,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
       subtitle: Text(altBaslik, style: const TextStyle(color: Colors.white60, fontSize: 11)),
       onTap: () {
-        Navigator.of(context, rootNavigator: true).pop();
+        Navigator.pop(context);
         onTap();
       },
     );
@@ -1895,7 +1915,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   void _bulutServisiSec() {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (cloudContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF0F111A),
           shape: RoundedRectangleBorder(
@@ -1906,10 +1926,10 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _bulutOgesi(icon: Icons.add_to_drive, baslik: 'Google Drive'),
-              _bulutOgesi(icon: Icons.cloud_outlined, baslik: 'Microsoft OneDrive'),
-              _bulutOgesi(icon: Icons.folder_zip_outlined, baslik: 'Dropbox'),
-              _bulutOgesi(icon: Icons.apple, baslik: 'iCloud Drive'),
+              _bulutOgesi(icon: Icons.add_to_drive, baslik: 'Google Drive', context: cloudContext),
+              _bulutOgesi(icon: Icons.cloud_outlined, baslik: 'Microsoft OneDrive', context: cloudContext),
+              _bulutOgesi(icon: Icons.folder_zip_outlined, baslik: 'Dropbox', context: cloudContext),
+              _bulutOgesi(icon: Icons.apple, baslik: 'iCloud Drive', context: cloudContext),
             ],
           ),
         );
@@ -1917,12 +1937,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     );
   }
 
-  Widget _bulutOgesi({required IconData icon, required String baslik}) {
+  Widget _bulutOgesi({required IconData icon, required String baslik, required BuildContext context}) {
     return ListTile(
       leading: Icon(icon, color: Colors.cyan),
       title: Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 14)),
       onTap: () {
-        Navigator.of(context, rootNavigator: true).pop();
+        Navigator.pop(context);
         _dosyaSec();
       },
     );
