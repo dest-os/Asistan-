@@ -7,6 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 class SohbetEkrani extends StatefulWidget {
   const SohbetEkrani({super.key});
@@ -21,6 +22,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   String _hitapSekli = 'Efendim';
   String _karakter = 'ERKEK';
   bool _yuklendi = false;
+
+  // Kişiselleştirme & Erişilebilirlik
+  double _yaziBoyutu = 22.0;
+  String _yaziStili = "Fütüristik";
+  double _konusmaHizi = 0.46;
+  double _sesTonu = 0.58;
 
   // Depolama Dizinleri
   String _arsivYolu = "Dahili Hafıza / ARES / Arsiv";
@@ -48,6 +55,89 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   late AnimationController _spectrumController;
   late AnimationController _pulseController;
+
+  // ============================================================
+  // 📚 DÜNYADAKİ YAPAY ZEKALAR KATALOĞU (ÜCRETSİZ / SÜRELI / ÜCRETLİ)
+  // ============================================================
+  final List<Map<String, String>> _hazirKatalog = [
+    {
+      "firma": "Google Gemini (1.5 Flash / Pro)",
+      "kategori": "ÜCRETSİZ / GENİŞ KOTA",
+      "adres": "https://generativelanguage.googleapis.com",
+      "uzmanlik": "Metin, Görsel Analiz, Kodlama, Çeviri, Mantık",
+      "link": "https://aistudio.google.com/app/apikey"
+    },
+    {
+      "firma": "Groq (Llama 3.3 70B & Mixtral)",
+      "kategori": "ÜCRETSİZ / ULTRA HIZLI",
+      "adres": "https://api.groq.com/openai/v1",
+      "uzmanlik": "Işık Hızında Çıkarım, Kodlama, Sohbet",
+      "link": "https://console.groq.com/keys"
+    },
+    {
+      "firma": "Hugging Face (Inference API)",
+      "kategori": "ÜCRETSİZ / AÇIK KAYNAK",
+      "adres": "https://api-inference.huggingface.co",
+      "uzmanlik": "Açık Kaynak Modeller, NLP, Çeviri",
+      "link": "https://huggingface.co/settings/tokens"
+    },
+    {
+      "firma": "NVIDIA NIM (Llama 3.1 & Nemotron)",
+      "kategori": "SÜRE SINIRLI / ÜCRETSİZ KREDİ",
+      "adres": "https://integrate.api.nvidia.com",
+      "uzmanlik": "Kodlama, Taktiksel Analiz, Yazılım, Matematik",
+      "link": "https://build.nvidia.com"
+    },
+    {
+      "firma": "OpenAI (GPT-4o & GPT-4o-mini)",
+      "kategori": "SÜRE SINIRLI / DENEME KREDİSİ",
+      "adres": "https://api.openai.com/v1",
+      "uzmanlik": "Genel Zeka, Mantık, Çeviri, Veri Analizi",
+      "link": "https://platform.openai.com/api-keys"
+    },
+    {
+      "firma": "Anthropic (Claude 3.5 Sonnet)",
+      "kategori": "SÜRE SINIRLI / DENEME KREDİSİ",
+      "adres": "https://api.anthropic.com/v1",
+      "uzmanlik": "İleri Düzey Kodlama, Edebi Yazım, Mimari",
+      "link": "https://console.anthropic.com/settings/keys"
+    },
+    {
+      "firma": "Mistral AI (Codestral & Mistral Large)",
+      "kategori": "SÜRE SINIRLI / ÜCRETSİZ KOTA",
+      "adres": "https://api.mistral.ai/v1",
+      "uzmanlik": "Avrupa Zekası, Hızlı Kodlama, Çok Dilli",
+      "link": "https://console.mistral.ai/api-keys"
+    },
+    {
+      "firma": "ElevenLabs (Doğal Ses Klonlama)",
+      "kategori": "SÜRE SINIRLI / ÜCRETSİZ KOTA",
+      "adres": "https://api.elevenlabs.io/v1",
+      "uzmanlik": "Gerçekçi İnsan Sesi, Ses Klonlama",
+      "link": "https://elevenlabs.io"
+    },
+    {
+      "firma": "DeepSeek (V3 & R1 Reasoner)",
+      "kategori": "ÜCRETLİ / DÜŞÜK MALİYET",
+      "adres": "https://api.deepseek.com/v1",
+      "uzmanlik": "Derin Matematik, Yazılım Mimarisi, Mantık",
+      "link": "https://platform.deepseek.com"
+    },
+    {
+      "firma": "Midjourney / Flux Pro (Görsel)",
+      "kategori": "ÜCRETLİ / ÖZEL ÜRETİM",
+      "adres": "https://api.midjourney.com",
+      "uzmanlik": "Sinematik Görsel, Siberpunk Konsept Sanatı",
+      "link": "https://www.midjourney.com"
+    },
+    {
+      "firma": "Runway Gen-3 (Sinematik Video)",
+      "kategori": "ÜCRETLİ / VİDEO ÜRETİMİ",
+      "adres": "https://api.runwayml.com/v1",
+      "uzmanlik": "Yapay Zeka Video Üretimi ve Animasyon",
+      "link": "https://runwayml.com"
+    },
+  ];
 
   @override
   void initState() {
@@ -93,11 +183,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       await _tts.awaitSpeakCompletion(true);
 
       if (karakter == 'ERKEK') {
-        await _tts.setPitch(0.58);
-        await _tts.setSpeechRate(0.44);
+        await _tts.setPitch(_sesTonu);
+        await _tts.setSpeechRate(_konusmaHizi);
       } else {
         await _tts.setPitch(1.05);
-        await _tts.setSpeechRate(0.50);
+        await _tts.setSpeechRate(_konusmaHizi);
       }
 
       List<dynamic>? voices = await _tts.getVoices;
@@ -162,8 +252,12 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _karakter = prefs.getString('secilen_karakter') ?? 'ERKEK';
     String kayitliIsim = prefs.getString('kullanici_adi') ?? 'İbrahim';
     _hitapSekli = prefs.getString('hitap_sekli') ?? 'Efendim';
-    List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
+    _yaziBoyutu = prefs.getDouble('yazi_boyutu') ?? 22.0;
+    _yaziStili = prefs.getString('yazi_stili') ?? "Fütüristik";
+    _konusmaHizi = prefs.getDouble('konusma_hizi') ?? 0.46;
+    _sesTonu = prefs.getDouble('ses_tonu') ?? 0.58;
 
+    List<String> eklenenler = prefs.getStringList('ozel_eklenen_araclar') ?? [];
     _arsivYolu = prefs.getString('arsiv_kayit_yolu') ?? "Dahili Hafıza / ARES / Arsiv";
     _notlarYolu = prefs.getString('notlar_kayit_yolu') ?? "Dahili Hafıza / ARES / Notlar";
     _egitimYolu = prefs.getString('egitim_kayit_yolu') ?? "Dahili Hafıza / ARES / Egitim";
@@ -213,13 +307,13 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         _bgImage = (_karakter == 'KADIN')
             ? 'assets/kadin_ares_ekrani.png'
             : 'assets/erkek_ares_ekrani.png';
-        _metin = "$_karakter ARES arayüzü ve ses motoru aktif edildi $_hitapSekli.";
+        _metin = "$_karakter ARES aktif edildi $_hitapSekli.";
       });
     }
   }
 
   // ============================================================
-  // 🏛️ YAPAY ZEKA KONSEYİ VE HAKEM SİSTEMİ (MULTI-AGENT ARBITRATOR)
+  // 🏛️ YAPAY ZEKA KONSEYİ & HAKEM SİSTEMİ
   // ============================================================
   Future<String> _googleGeminiCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
@@ -227,7 +321,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     String sistemPrompt = "Sen ARES adlı siberpunk üst düzey yapay zekasın. "
         "Kullanıcı adı: '$_kullaniciAdi'. Hitap şekli: '$_hitapSekli'. "
-        "ÖNEMLİ KURAL: Kullanıcının konuşma-metin çevirisinde oluşabilecek ses hatalarını "
+        "Kullanıcının konuşma-metin çevirisinde oluşabilecek ses hatalarını "
         "(örneğin 'gitar' yerine 'GitHub', 'kod' yerine 'kot' gibi) teknik ve mantıksal bağlamına göre otomatik düzelt. "
         "Türkçe, zeki, doğrudan, net ve profesyonel cevap ver.";
 
@@ -253,7 +347,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       final data = json.decode(utf8.decode(response.bodyBytes));
       return data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ?? "";
     } else {
-      throw Exception("Google HTTP ${response.statusCode}: ${response.body}");
+      throw Exception("Google HTTP ${response.statusCode}");
     }
   }
 
@@ -292,7 +386,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
   Future<String> _konseyVeHakemIleCevapla(String soru) async {
     if (_kayitliApiler.isEmpty) {
-      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen sol menüdeki Yapay Zeka Havuzu'ndan Google veya Nvidia anahtarınızı ekleyin.";
+      return "Efendim, henüz sisteme bir API anahtarı tanımlanmadı. Lütfen Yapay Zeka Havuzu'ndan Google veya Nvidia anahtarınızı ekleyin.";
     }
 
     String? googleKey;
@@ -307,7 +401,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       }
     }
 
-    // Yedek: Eğer ad eşleşmezse ilk anahtarı Google veya Nvidia kabul et
     if (googleKey == null && _kayitliApiler.isNotEmpty) {
       googleKey = _kayitliApiler.first["anahtar"];
     }
@@ -315,7 +408,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     String googleYaniti = "";
     String nvidiaYaniti = "";
 
-    // 1. Konsey Modellerini Paralel Çağır
     List<Future> cagrilari = [];
     if (googleKey != null && googleKey.isNotEmpty) {
       cagrilari.add(_googleGeminiCagrisi(googleKey, soru).then((res) => googleYaniti = res).catchError((_) => ""));
@@ -326,9 +418,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     await Future.wait(cagrilari);
 
-    // 2. Hakem Karar Mekanizması
     if (googleYaniti.trim().isNotEmpty && nvidiaYaniti.trim().isNotEmpty) {
-      // İki model de yanıt verdiyse en zengin ve akıcı olanı hakem kararıyla seç
       return googleYaniti.length >= nvidiaYaniti.length ? googleYaniti.trim() : nvidiaYaniti.trim();
     } else if (googleYaniti.trim().isNotEmpty) {
       return googleYaniti.trim();
@@ -340,8 +430,54 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   }
 
   // ============================================================
-  // DİNLEME VE CEVAP SİSTEMİ
+  // 🎙️ SESLİ VE DOKUNMATİK ÇİFTE KOMUT MOTORU
   // ============================================================
+  bool _sesliSistemKomutuMu(String girdi) {
+    String k = girdi.toLowerCase().trim();
+
+    if (k.contains("ayarları aç") || k.contains("ayar menüsü") || k.contains("ayarlar paneli")) {
+      _ayarlarPaneliniAc();
+      return true;
+    }
+    if (k.contains("api ekle") || k.contains("yapay zeka havuzu") || k.contains("api havuzu")) {
+      _apiHavuzuPopUpAc();
+      return true;
+    }
+    if (k.contains("sistem ayarları") || k.contains("kişiselleştirme")) {
+      _sistemAyarlariPopUpAc();
+      return true;
+    }
+    if (k.contains("kadın ares") || k.contains("kadına geç")) {
+      _karakterDegistir('KADIN');
+      return true;
+    }
+    if (k.contains("erkek ares") || k.contains("erkeğe geç")) {
+      _karakterDegistir('ERKEK');
+      return true;
+    }
+    if (k.contains("sessiz moda geç") || k.contains("mikrofonu kapat")) {
+      if (!_sessizMod) _mikrofonaDokunuldu();
+      return true;
+    }
+    if (k.contains("sesli moda geç") || k.contains("mikrofonu aç")) {
+      if (_sessizMod) _mikrofonaDokunuldu();
+      return true;
+    }
+    if (k.contains("yazıları büyüt") || k.contains("yazıyı büyüt")) {
+      setState(() => _yaziBoyutu = 28.0);
+      SharedPreferences.getInstance().then((p) => p.setDouble('yazi_boyutu', 28.0));
+      _cevapVer("Yazı boyutu büyük moda alındı $_hitapSekli.");
+      return true;
+    }
+    if (k.contains("yazıları küçült") || k.contains("yazıyı küçült")) {
+      setState(() => _yaziBoyutu = 18.0);
+      SharedPreferences.getInstance().then((p) => p.setDouble('yazi_boyutu', 18.0));
+      _cevapVer("Yazı boyutu kompakt moda alındı $_hitapSekli.");
+      return true;
+    }
+    return false;
+  }
+
   Future<void> _dinlemeBaslat() async {
     if (_sessizMod || _konusuyor || _isProcessing) return;
 
@@ -373,7 +509,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
         await _speech.listen(
           localeId: "tr_TR",
           listenMode: stt.ListenMode.confirmation,
-          pauseFor: const Duration(seconds: 3), // Cümlenin bitmesini sabırla bekler
+          pauseFor: const Duration(seconds: 3),
           onSoundLevelChange: (level) {
             if (mounted) {
               setState(() {
@@ -421,6 +557,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
     if (girdi.trim().isEmpty || _isProcessing) return;
 
+    // Sesli sistem komutu ise doğrudan çalıştır
+    if (_sesliSistemKomutuMu(girdi)) return;
+
     _sonCevapZamani = now;
     await _speech.stop();
 
@@ -430,7 +569,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       _metin = "Konsey değerlendiriyor $_hitapSekli...";
     });
 
-    // 🏛️ Konsey ve Hakemden En Mükemmel Cevabı Al
     String cevap = await _konseyVeHakemIleCevapla(girdi);
 
     if (mounted) {
@@ -439,7 +577,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       });
     }
 
-    // 🎙️ Mikrofon Aktifse Seslendir, Sessiz Moddaysa Sadece Ekrana Yaz
     if (!_sessizMod) {
       await _tts.speak(cevap);
     } else {
@@ -457,6 +594,407 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     _textController.clear();
     FocusScope.of(context).unfocus();
     _cevapVer(text);
+  }
+
+  // ============================================================
+  // 🛡️ GÜVENLİ MERKEZİ POP-UP HUD PENCERELERİ (KAPANMAZ KİLİTLİ)
+  // ============================================================
+
+  // 1. YAPAY ZEKA HAVUZU // KATALOGLU POP-UP
+  void _apiHavuzuPopUpAc() {
+    final TextEditingController firmaCtrl = TextEditingController();
+    final TextEditingController adresCtrl = TextEditingController();
+    final TextEditingController anahtarCtrl = TextEditingController();
+    final TextEditingController uzmanlikCtrl = TextEditingController();
+
+    String seciliWebLink = "https://aistudio.google.com/app/apikey";
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 🔒 Dışarıya tıklanınca ASLA kapanmaz!
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  height: MediaQuery.of(context).size.height * 0.85,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF070B14),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.cyanAccent, width: 2.0),
+                    boxShadow: [
+                      BoxShadow(color: Colors.cyanAccent.withOpacity(0.35), blurRadius: 30, spreadRadius: 3),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // POP-UP BAŞLIK VE KAPATMA
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.hub_rounded, color: Colors.cyanAccent, size: 22),
+                              SizedBox(width: 10),
+                              Text(
+                                "YAPAY ZEKÂ HAVUZU // API KATALOĞU & YÖNETİMİ",
+                                style: TextStyle(color: Colors.cyanAccent, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                        ],
+                      ),
+                      const Divider(color: Colors.white12),
+
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // SOL: HAZIR YAPAY ZEKALAR KATALOĞU
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "📚 HAZIR YAPAY ZEKA LİSTESİ (SEÇ VE OTOMATİK DOLDUR):",
+                                    style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: _hazirKatalog.length,
+                                      itemBuilder: (context, index) {
+                                        final item = _hazirKatalog[index];
+                                        return Container(
+                                          margin: const EdgeInsets.only(bottom: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0C1424),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFF1B3B5F)),
+                                          ),
+                                          child: ListTile(
+                                            dense: true,
+                                            title: Text(item["firma"]!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                            subtitle: Text("${item["kategori"]!} • ${item["uzmanlik"]!}", style: const TextStyle(color: Colors.cyanAccent, fontSize: 10)),
+                                            trailing: const Icon(Icons.touch_app_rounded, color: Colors.cyanAccent, size: 18),
+                                            onTap: () {
+                                              firmaCtrl.text = item["firma"]!;
+                                              adresCtrl.text = item["adres"]!;
+                                              uzmanlikCtrl.text = item["uzmanlik"]!;
+                                              seciliWebLink = item["link"]!;
+                                              setModalState(() {});
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const VerticalDivider(color: Colors.white12, width: 24),
+
+                            // SAĞ: DOLDURULAN FORM VE WEB BAĞLANTISI
+                            Expanded(
+                              flex: 5,
+                              child: ListView(
+                                children: [
+                                  _siberpunkGirisKutusu(
+                                    baslik: "1. FİRMA / MODEL ADI",
+                                    hint: "Listeden seçin veya yazın",
+                                    controller: firmaCtrl,
+                                    icon: Icons.business_rounded,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _siberpunkGirisKutusu(
+                                    baslik: "2. API ADRESİ (ENDPOINT)",
+                                    hint: "https://...",
+                                    controller: adresCtrl,
+                                    icon: Icons.link_rounded,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _siberpunkGirisKutusu(
+                                    baslik: "3. API ANAHTARI (SECRET KEY)",
+                                    hint: "Anahtarınızı buraya yapıştırın",
+                                    controller: anahtarCtrl,
+                                    icon: Icons.vpn_key_rounded,
+                                    sifreli: true,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _siberpunkGirisKutusu(
+                                    baslik: "4. UZMANLIK ALANI",
+                                    hint: "Metin, Kod, Görsel...",
+                                    controller: uzmanlikCtrl,
+                                    icon: Icons.psychology_rounded,
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // WEB KÖPRÜSÜ BUTONU (DOĞRUDAN API ALMA SAYFASINI AÇAR)
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final uri = Uri.parse(seciliWebLink);
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.cyanAccent.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.6)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.open_in_browser_rounded, color: Colors.cyanAccent, size: 16),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            "🔗 SEÇİLİ MODELİN API ANAHTARI ALMA SAYFASINI AÇ",
+                                            style: TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+
+                                  // KAYDET VE PENCEREYİ KAPAT BUTONU
+                                  GestureDetector(
+                                    onTap: () async {
+                                      if (firmaCtrl.text.trim().isEmpty || anahtarCtrl.text.trim().isEmpty) return;
+
+                                      final yeniApi = {
+                                        "firma": firmaCtrl.text.trim(),
+                                        "adres": adresCtrl.text.trim(),
+                                        "anahtar": anahtarCtrl.text.trim(),
+                                        "uzmanlik": uzmanlikCtrl.text.trim(),
+                                        "tarih": DateTime.now().toIso8601String(),
+                                      };
+
+                                      _kayitliApiler.add(yeniApi);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setString('kayitli_api_havuzu', json.encode(_kayitliApiler));
+
+                                      setState(() {});
+                                      if (!mounted) return;
+                                      Navigator.pop(dialogContext); // 💾 Kaydedince otomatik kapanır!
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF042940),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: Colors.cyanAccent, width: 1.8),
+                                        boxShadow: [
+                                          BoxShadow(color: Colors.cyanAccent.withOpacity(0.4), blurRadius: 12),
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.save_rounded, color: Colors.cyanAccent, size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            "SİSTEME KAYDET VE AKTİF ET",
+                                            style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 2. SİSTEM VE KİŞİSELLEŞTİRME POP-UP MERKEZİ
+  void _sistemAyarlariPopUpAc() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 🔒 Kapanmaz kilitli
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.65,
+                  height: MediaQuery.of(context).size.height * 0.80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF070B14),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.cyanAccent, width: 2.0),
+                    boxShadow: [
+                      BoxShadow(color: Colors.cyanAccent.withOpacity(0.35), blurRadius: 30, spreadRadius: 3),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.tune_rounded, color: Colors.cyanAccent, size: 22),
+                              SizedBox(width: 10),
+                              Text(
+                                "SİSTEM & KİŞİSELLEŞTİRME MERKEZİ",
+                                style: TextStyle(color: Colors.cyanAccent, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                        ],
+                      ),
+                      const Divider(color: Colors.white12),
+
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            // 1. KARAKTER SEÇİMİ
+                            const Text("1. ARES KARAKTER & ARAYÜZ MODELİ:", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _karakterSecim3dButon(
+                                    baslik: "ERKEK ARES 👦",
+                                    aktif: _karakter == 'ERKEK',
+                                    onTap: () {
+                                      _karakterDegistir('ERKEK');
+                                      setModalState(() {});
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _karakterSecim3dButon(
+                                    baslik: "KADIN ARES 👩",
+                                    aktif: _karakter == 'KADIN',
+                                    onTap: () {
+                                      _karakterDegistir('KADIN');
+                                      setModalState(() {});
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 2. YAZI BOYUTU (ERİŞİLEBİLİRLİK & GÖZ SAĞLIĞI)
+                            Text("2. YAZI BOYUTU: ${_yaziBoyutu.toInt()} px (${_yaziBoyutu > 24 ? "Büyük (Yaşlı/Göz Dostu)" : (_yaziBoyutu < 20 ? "Kompakt" : "Standart")})",
+                                style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Slider(
+                              value: _yaziBoyutu,
+                              min: 16.0,
+                              max: 32.0,
+                              divisions: 8,
+                              activeColor: Colors.cyanAccent,
+                              inactiveColor: Colors.white12,
+                              onChanged: (val) {
+                                setModalState(() => _yaziBoyutu = val);
+                                setState(() => _yaziBoyutu = val);
+                              },
+                            ),
+                            const SizedBox(height: 10),
+
+                            // 3. SES VE DİKSİYON HIZI
+                            Text("3. ARES KONUŞMA HIZI: ${(_konusmaHizi * 2).toStringAsFixed(1)}x", style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Slider(
+                              value: _konusmaHizi,
+                              min: 0.30,
+                              max: 0.80,
+                              divisions: 10,
+                              activeColor: Colors.cyanAccent,
+                              inactiveColor: Colors.white12,
+                              onChanged: (val) {
+                                setModalState(() => _konusmaHizi = val);
+                                setState(() => _konusmaHizi = val);
+                              },
+                            ),
+                            const SizedBox(height: 10),
+
+                            // 4. SES TONU DERİNLİĞİ
+                            Text("4. SES TONU DERİNLİĞİ: ${_sesTonu.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Slider(
+                              value: _sesTonu,
+                              min: 0.40,
+                              max: 1.20,
+                              divisions: 8,
+                              activeColor: Colors.cyanAccent,
+                              inactiveColor: Colors.white12,
+                              onChanged: (val) {
+                                setModalState(() => _sesTonu = val);
+                                setState(() => _sesTonu = val);
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // TÜMÜNÜ KAYDET VE ÇIK
+                            GestureDetector(
+                              onTap: () async {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setDouble('yazi_boyutu', _yaziBoyutu);
+                                await prefs.setDouble('konusma_hizi', _konusmaHizi);
+                                await prefs.setDouble('ses_tonu', _sesTonu);
+                                await _sesMotorunuAyarla(_karakter);
+
+                                setState(() {});
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext); // 💾 Kayıt sonrası kapanır!
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF042940),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.cyanAccent, width: 1.8),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text("TÜM AYARLARI KAYDET VE SİSTEME İŞLE", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   // ============================================================
@@ -499,19 +1037,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          const Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.cyanAccent.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.cyanAccent, width: 1.2),
-                                ),
-                                child: const Icon(Icons.settings_suggest_rounded, color: Colors.cyanAccent, size: 20),
-                              ),
-                              const SizedBox(width: 10),
-                              const Text(
+                              Icon(Icons.settings_suggest_rounded, color: Colors.cyanAccent, size: 20),
+                              SizedBox(width: 10),
+                              Text(
                                 "ARES // SİSTEM KONTROL",
                                 style: TextStyle(
                                   color: Colors.cyanAccent,
@@ -562,48 +1092,28 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 12),
 
-                            // 2. KARAKTER VE SES GEÇİŞİ
-                            _siberpunk3dKart(
-                              baslik: "ARES KARAKTER & SES MODELİ",
-                              altBaslik: "Aktif arayüz ve ses motorunu anında değiştirin",
-                              icon: Icons.record_voice_over_rounded,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _karakterSecim3dButon(
-                                      baslik: "ERKEK ARES",
-                                      aktif: _karakter == 'ERKEK',
-                                      onTap: () {
-                                        _karakterDegistir('ERKEK');
-                                        Navigator.pop(context);
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _karakterSecim3dButon(
-                                      baslik: "KADIN ARES",
-                                      aktif: _karakter == 'KADIN',
-                                      onTap: () {
-                                        _karakterDegistir('KADIN');
-                                        Navigator.pop(context);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            // 2. TEK ÇATI: SİSTEM VE KİŞİSELLEŞTİRME MERKEZİ BUTONU
+                            _siberpunk3dButon(
+                              baslik: "⚙️ SİSTEM VE KİŞİSELLEŞTİRME",
+                              altBaslik: "Karakter, Yüz, Ses Tonu, Yazı Boyutu & Erişilebilirlik",
+                              icon: Icons.tune_rounded,
+                              vurgulu: true,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _sistemAyarlariPopUpAc();
+                              },
                             ),
                             const SizedBox(height: 12),
 
-                            // 3. YAPAY ZEKA HAVUZU // API YÖNETİMİ
+                            // 3. YAPAY ZEKA HAVUZU // KATALOGLU API YÖNETİMİ
                             _siberpunk3dButon(
-                              baslik: "YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
-                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Motoru Tanımlı",
+                              baslik: "🌐 YAPAY ZEKÂ HAVUZU // API YÖNETİMİ",
+                              altBaslik: "${_kayitliApiler.length} Yapay Zeka Tanımlı (Hazır Kataloglu)",
                               icon: Icons.hub_rounded,
                               vurgulu: true,
                               onTap: () {
                                 Navigator.pop(context);
-                                _apiHavuzuPaneliniAc();
+                                _apiHavuzuPopUpAc();
                               },
                             ),
                             const SizedBox(height: 12),
@@ -786,6 +1296,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF080D18),
@@ -840,220 +1351,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               child: const Text("SİSTEME EKLE", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  void _apiHavuzuPaneliniAc() {
-    final TextEditingController firmaCtrl = TextEditingController();
-    final TextEditingController adresCtrl = TextEditingController();
-    final TextEditingController anahtarCtrl = TextEditingController();
-    final TextEditingController uzmanlikCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.88,
-              decoration: BoxDecoration(
-                color: const Color(0xFF080C14),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: Colors.cyanAccent.withOpacity(0.8), width: 1.8),
-                boxShadow: [
-                  BoxShadow(color: Colors.cyanAccent.withOpacity(0.3), blurRadius: 25, spreadRadius: 3),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 50,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.cyanAccent.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "YAPAY ZEKÂ HAVUZU // API KAYIT & YÖNETİM",
-                        style: TextStyle(color: Colors.cyanAccent, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const Divider(color: Colors.white12),
-                  const SizedBox(height: 8),
-
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _siberpunkGirisKutusu(
-                          baslik: "1. FİRMA / YAPAY ZEKA ADI",
-                          hint: "Örn: Google, Nvidia, OpenAI, Anthropic...",
-                          controller: firmaCtrl,
-                          icon: Icons.business_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        _siberpunkGirisKutusu(
-                          baslik: "2. API ADRESİ (ENDPOINT)",
-                          hint: "Örn: https://generativelanguage.googleapis.com",
-                          controller: adresCtrl,
-                          icon: Icons.link_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        _siberpunkGirisKutusu(
-                          baslik: "3. API ANAHTARI (SECRET KEY)",
-                          hint: "Kullanıcıya özel gizli API anahtarı",
-                          controller: anahtarCtrl,
-                          icon: Icons.vpn_key_rounded,
-                          sifreli: true,
-                        ),
-                        const SizedBox(height: 12),
-                        _siberpunkGirisKutusu(
-                          baslik: "4. UZMANLIK ALANI",
-                          hint: "Örn: Resim, Video, Metin, Kod, Ses Analizi, 3D",
-                          controller: uzmanlikCtrl,
-                          icon: Icons.psychology_rounded,
-                        ),
-                        const SizedBox(height: 18),
-
-                        Center(
-                          child: GestureDetector(
-                            onTap: () async {
-                              if (firmaCtrl.text.trim().isEmpty || anahtarCtrl.text.trim().isEmpty) return;
-
-                              final yeniApi = {
-                                "firma": firmaCtrl.text.trim(),
-                                "adres": adresCtrl.text.trim(),
-                                "anahtar": anahtarCtrl.text.trim(),
-                                "uzmanlik": uzmanlikCtrl.text.trim(),
-                                "tarih": DateTime.now().toIso8601String(),
-                              };
-
-                              _kayitliApiler.add(yeniApi);
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setString('kayitli_api_havuzu', json.encode(_kayitliApiler));
-
-                              firmaCtrl.clear();
-                              adresCtrl.clear();
-                              anahtarCtrl.clear();
-                              uzmanlikCtrl.clear();
-
-                              setModalState(() {});
-                              setState(() {});
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF041C32),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: Colors.cyanAccent, width: 1.6),
-                                boxShadow: [
-                                  BoxShadow(color: Colors.cyanAccent.withOpacity(0.4), blurRadius: 14),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.save_rounded, color: Colors.cyanAccent, size: 18),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "YAPAY ZEKAYI HAVUZA EKLE",
-                                    style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        const Text(
-                          "ARES BÜNYESİNDEKİ AKTİF YAPAY ZEKALAR:",
-                          style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
-                        ),
-                        const SizedBox(height: 10),
-
-                        if (_kayitliApiler.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: Center(
-                              child: Text(
-                                "Henüz harici bir API tanımlanmadı.\nAres varsayılan sistem beyni ile çalışıyor.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white30, fontSize: 13),
-                              ),
-                            ),
-                          )
-                        else
-                          ..._kayitliApiler.asMap().entries.map((entry) {
-                            int idx = entry.key;
-                            var item = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0D1322),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.cyan.withOpacity(0.4), width: 1.2),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.cyanAccent.withOpacity(0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.memory_rounded, color: Colors.cyanAccent, size: 20),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(item["firma"] ?? "", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                                        const SizedBox(height: 2),
-                                        Text("Uzmanlık: ${item["uzmanlik"] ?? "Genel"}", style: const TextStyle(color: Colors.cyanAccent, fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                    onPressed: () async {
-                                      _kayitliApiler.removeAt(idx);
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setString('kayitli_api_havuzu', json.encode(_kayitliApiler));
-                                      setModalState(() {});
-                                      setState(() {});
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
         );
       },
     );
@@ -1289,6 +1586,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF080D18),
@@ -1611,7 +1909,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ),
           ),
 
-          // 2. ORTA ANA SOHBET ALANI
+          // 2. ORTA ANA SOHBET ALANI (DİNAMİK YAZI BOYUTLU)
           Positioned(
             left: screenWidth * 0.28,
             right: screenWidth * 0.29,
@@ -1628,9 +1926,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
                 child: Text(
                   _metin,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: _yaziBoyutu, // 👓 Kullanıcı seçimine göre dinamik boyut
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.3,
                     height: 1.35,
