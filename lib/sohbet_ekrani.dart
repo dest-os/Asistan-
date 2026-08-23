@@ -38,7 +38,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _textController = TextEditingController();
 
-  String _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
+  String _metin = "Seni dinliyorum Efendim...";
   bool _sessizMod = false;
   bool _dinliyor = false;
   bool _konusuyor = false;
@@ -237,9 +237,9 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           _isProcessing = false;
         });
 
-        // Konuşma bittikten sonra sessiz modda değilse mikrofonu nazikçe aç
+        // Ares konuşmasını bitirdiğinde otomatik tekrar dinlemeye geçer
         if (!_sessizMod) {
-          Future.delayed(const Duration(milliseconds: 600), () {
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && !_sessizMod && !_konusuyor && !_isProcessing) {
               _dinlemeBaslat();
             }
@@ -307,9 +307,16 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
             ? 'assets/kadin_ares_ekrani.png'
             : 'assets/erkek_ares_ekrani.png';
         _kullaniciAdi = kayitliIsim;
-        _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
+        _metin = "Seni dinliyorum $_hitapSekli...";
         _ozelAraclar = eklenenler;
         _yuklendi = true;
+      });
+
+      // Açılışta 1 saniye sonra dinlemeyi nazikçe başlat
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && !_sessizMod) {
+          _dinlemeBaslat();
+        }
       });
     }
   }
@@ -352,7 +359,7 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
   // 🏛️ YAPAY ZEKA ÇAĞRILARI & FAILOVER
   // ============================================================
 
-  // 1. NVIDIA NIM ÇAĞRISI (Llama 3.1 70B Instruct)
+  // 1. NVIDIA NIM ÇAĞRISI
   Future<String?> _nvidiaLlamaCagrisi(String apiKey, String soru) async {
     final cleanKey = apiKey.trim();
     final url = Uri.parse("https://integrate.api.nvidia.com/v1/chat/completions");
@@ -557,11 +564,11 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
       return true;
     }
     if (k.contains("sessiz moda geç") || k.contains("mikrofonu kapat")) {
-      if (!_sessizMod) _mikrofonaDokunuldu();
+      _sessizModaAl();
       return true;
     }
     if (k.contains("sesli moda geç") || k.contains("mikrofonu aç")) {
-      if (_sessizMod) _mikrofonaDokunuldu();
+      _sesliModaAl();
       return true;
     }
     if (k.contains("yazıları büyüt") || k.contains("yazıyı büyüt")) {
@@ -614,7 +621,6 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
           onResult: (result) {
             if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
               String recognized = result.recognizedWords.trim();
-              // Anlamsız ortam fısıltılarını (3 harften kısa) yok say
               if (recognized.length >= 3) {
                 _cevapVer(recognized);
               }
@@ -627,24 +633,37 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
     }
   }
 
+  void _sesliModaAl() async {
+    setState(() {
+      _sessizMod = false;
+      _isProcessing = false;
+      _metin = "Seni dinliyorum $_hitapSekli...";
+    });
+    await _dinlemeBaslat();
+  }
+
+  void _sessizModaAl() async {
+    await _speech.stop();
+    await _tts.stop();
+    setState(() {
+      _sessizMod = true;
+      _dinliyor = false;
+      _konusuyor = false;
+      _isProcessing = false;
+      _metin = "Sessiz Mod Aktif (Sadece Yazı İle İletişim)";
+    });
+  }
+
   void _mikrofonaDokunuldu() async {
     if (_sessizMod) {
-      setState(() {
-        _sessizMod = false;
-        _isProcessing = false;
-        _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?";
-      });
-      await _dinlemeBaslat();
+      _sesliModaAl();
     } else {
-      await _speech.stop();
-      await _tts.stop();
-      setState(() {
-        _sessizMod = true;
-        _dinliyor = false;
-        _konusuyor = false;
-        _isProcessing = false;
-        _metin = "Sessiz Mod Aktif (Sadece Yazı İle İletişim)";
-      });
+      if (_dinliyor) {
+        await _speech.stop();
+        setState(() => _dinliyor = false);
+      } else {
+        await _dinlemeBaslat();
+      }
     }
   }
 
@@ -2160,7 +2179,8 @@ class _SohbetEkraniState extends State<SohbetEkrani> with TickerProviderStateMix
               behavior: HitTestBehavior.translucent,
               onTap: () {
                 _textController.clear();
-                setState(() => _metin = "Efendim, sistemlerim aktif. Sizin için ne yapabilirim?");
+                setState(() => _metin = "Seni dinliyorum $_hitapSekli...");
+                _dinlemeBaslat();
               },
               child: Container(color: Colors.transparent),
             ),
