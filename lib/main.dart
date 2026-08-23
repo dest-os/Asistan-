@@ -1,46 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'giris_ekrani.dart';
-import 'sohbet_ekrani.dart';
+import 'screens/home_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ARES JARVIS Arayüzü İçin Yatay Ekran Kilitlemesi
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
-
-  // Durum çubuklarını gizleyip tam ekran siberpunk deneyimi sağlama
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-  final prefs = await SharedPreferences.getInstance();
-  final String? kullaniciAdi = prefs.getString('kullanici_adi');
-
-  runApp(AresAsistanApp(
-    baslangicEkrani: (kullaniciAdi != null && kullaniciAdi.isNotEmpty)
-        ? const SohbetEkrani()
-        : const GirisEkrani(),
-  ));
+  runApp(const VoiceAssistantApp());
 }
 
-class AresAsistanApp extends StatelessWidget {
-  final Widget baslangicEkrani;
-  const AresAsistanApp({super.key, required this.baslangicEkrani});
+class VoiceAssistantApp extends StatelessWidget {
+  const VoiceAssistantApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'AI Erkek Sesli Asistan',
       debugShowCheckedModeBanner: false,
-      title: 'Ares JARVIS Asistan',
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
-        fontFamily: 'Roboto',
+        primarySwatch: Colors.blue,
       ),
-      home: baslangicEkrani,
+      home: const HomeScreen(),
     );
   }
 }
